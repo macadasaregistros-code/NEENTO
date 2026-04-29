@@ -1,9 +1,16 @@
 import { supabase } from "@/lib/supabase";
 import { createInitialProgress, normalizeProgress } from "@/lib/srs";
-import type { CardProgress, CardType, VocabularyCard } from "@/types/card";
+import type {
+  CardProgress,
+  CardType,
+  NewVocabularyCardInput,
+  VocabularyCard,
+} from "@/types/card";
 
 interface CardRow {
   id: string;
+  user_id: string | null;
+  is_starter: boolean;
   type: CardType;
   japanese_romaji: string;
   japanese_kana?: string | null;
@@ -16,7 +23,7 @@ interface CardRow {
 
 interface CardProgressRow {
   id: string;
-  user_id: string | null;
+  user_id: string;
   card_id: string;
   visual_level: number;
   oral_level: number;
@@ -43,6 +50,8 @@ interface StudyData {
 function toVocabularyCard(row: CardRow): VocabularyCard {
   return {
     id: row.id,
+    userId: row.user_id ?? undefined,
+    isStarter: row.is_starter,
     type: row.type,
     japaneseRomaji: row.japanese_romaji,
     japaneseKana: row.japanese_kana ?? undefined,
@@ -57,7 +66,7 @@ function toVocabularyCard(row: CardRow): VocabularyCard {
 function toCardProgress(row: CardProgressRow): CardProgress {
   return normalizeProgress({
     cardId: row.card_id,
-    userId: row.user_id ?? undefined,
+    userId: row.user_id,
     visualLevel: row.visual_level,
     oralLevel: row.oral_level,
     visualDueAt: row.visual_due_at,
@@ -76,32 +85,35 @@ function toCardProgress(row: CardProgressRow): CardProgress {
   });
 }
 
-function toProgressPayload(progress: CardProgress) {
+function toProgressPayload(progress: CardProgress, userId: string) {
+  const normalized = normalizeProgress(progress);
+
   return {
-    user_id: progress.userId ?? null,
-    card_id: progress.cardId,
-    visual_level: progress.visualLevel,
-    oral_level: progress.oralLevel,
-    visual_due_at: progress.visualDueAt,
-    oral_due_at: progress.oralDueAt,
-    visual_success_count: progress.visualSuccessCount,
-    visual_fail_count: progress.visualFailCount,
-    oral_success_count: progress.oralSuccessCount,
-    oral_fail_count: progress.oralFailCount,
-    visual_streak: progress.visualStreak,
-    oral_streak: progress.oralStreak,
-    level_zero_visual_reps: progress.levelZeroVisualReps,
-    level_zero_oral_reps: progress.levelZeroOralReps,
-    last_visual_review_at: progress.lastVisualReviewAt ?? null,
-    last_oral_review_at: progress.lastOralReviewAt ?? null,
-    is_difficult: progress.isDifficult,
+    user_id: userId,
+    card_id: normalized.cardId,
+    visual_level: normalized.visualLevel,
+    oral_level: normalized.oralLevel,
+    visual_due_at: normalized.visualDueAt,
+    oral_due_at: normalized.oralDueAt,
+    visual_success_count: normalized.visualSuccessCount,
+    visual_fail_count: normalized.visualFailCount,
+    oral_success_count: normalized.oralSuccessCount,
+    oral_fail_count: normalized.oralFailCount,
+    visual_streak: normalized.visualStreak,
+    oral_streak: normalized.oralStreak,
+    level_zero_visual_reps: normalized.levelZeroVisualReps,
+    level_zero_oral_reps: normalized.levelZeroOralReps,
+    last_visual_review_at: normalized.lastVisualReviewAt ?? null,
+    last_oral_review_at: normalized.lastOralReviewAt ?? null,
+    is_difficult: normalized.isDifficult,
   };
 }
 
-export async function fetchSupabaseStudyData(): Promise<StudyData | null> {
+export async function fetchSupabaseStudyData(userId: string): Promise<StudyData | null> {
   const { data: cardRows, error: cardsError } = await supabase
     .from("cards")
     .select("*")
+    .order("is_starter", { ascending: false })
     .order("created_at", { ascending: true });
 
   if (cardsError || !cardRows || cardRows.length === 0) {
@@ -113,12 +125,12 @@ export async function fetchSupabaseStudyData(): Promise<StudyData | null> {
   const { data: progressRows, error: progressError } = await supabase
     .from("card_progress")
     .select("*")
-    .is("user_id", null);
+    .eq("user_id", userId);
 
   if (progressError) {
     return {
       cards,
-      progressList: cards.map((card) => createInitialProgress(card.id)),
+      progressList: cards.map((card) => createInitialProgress(card.id, userId)),
     };
   }
 
@@ -132,18 +144,22 @@ export async function fetchSupabaseStudyData(): Promise<StudyData | null> {
   return {
     cards,
     progressList: cards.map(
-      (card) => progressByCardId.get(card.id) ?? createInitialProgress(card.id),
+      (card) =>
+        progressByCardId.get(card.id) ?? createInitialProgress(card.id, userId),
     ),
   };
 }
 
-export async function saveSupabaseProgress(progress: CardProgress): Promise<void> {
-  const payload = toProgressPayload(normalizeProgress(progress));
+export async function saveSupabaseProgress(
+  progress: CardProgress,
+  userId: string,
+): Promise<void> {
+  const payload = toProgressPayload(progress, userId);
   const { data: existingRows, error: selectError } = await supabase
     .from("card_progress")
     .select("id")
     .eq("card_id", progress.cardId)
-    .is("user_id", null)
+    .eq("user_id", userId)
     .limit(1);
 
   if (selectError) {
@@ -170,4 +186,30 @@ export async function saveSupabaseProgress(progress: CardProgress): Promise<void
   if (error) {
     throw error;
   }
+}
+
+export async function createSupabaseCard(
+  input: NewVocabularyCardInput,
+  userId: string,
+): Promise<VocabularyCard> {
+  const payload = {
+    user_id: userId,
+    is_starter: false,
+    type: input.type,
+    japanese_romaji: input.japaneseRomaji.trim(),
+    japanese_kana: input.japaneseKana?.trim() || null,
+    spanish: input.spanish.trim(),
+    category: input.category.trim(),
+  };
+  const { data, error } = await supabase
+    .from("cards")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return toVocabularyCard(data as CardRow);
 }

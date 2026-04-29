@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useAuthSession } from "@/hooks/useAuthSession";
 import { mockCards, mockProgress } from "@/lib/mock-data";
 import {
   createInitialProgress,
@@ -10,17 +11,19 @@ import {
   updateProgress,
 } from "@/lib/srs";
 import {
+  createSupabaseCard,
   fetchSupabaseStudyData,
   saveSupabaseProgress,
 } from "@/lib/supabase-data";
 import type {
   CardProgress,
+  NewVocabularyCardInput,
   ReviewMode,
   ReviewResult,
   VocabularyCard,
 } from "@/types/card";
 
-const STORAGE_KEY = "neento-card-progress-v1";
+const STORAGE_KEY_PREFIX = "neento-card-progress-v1";
 
 type DataSource = "mock" | "supabase";
 
@@ -45,13 +48,17 @@ function mergeProgressForCards(
   );
 }
 
-function readStoredProgress(): CardProgress[] {
+function getStorageKey(userId?: string): string {
+  return userId ? `${STORAGE_KEY_PREFIX}-${userId}` : STORAGE_KEY_PREFIX;
+}
+
+function readStoredProgress(userId?: string): CardProgress[] {
   if (typeof window === "undefined") {
     return mockProgress;
   }
 
   try {
-    const rawValue = window.localStorage.getItem(STORAGE_KEY);
+    const rawValue = window.localStorage.getItem(getStorageKey(userId));
 
     if (!rawValue) {
       return mockProgress;
@@ -70,6 +77,8 @@ function readStoredProgress(): CardProgress[] {
 }
 
 export function useStudyProgress() {
+  const { isLoading: isAuthLoading, user } = useAuthSession();
+  const userId = user?.id;
   const [cards, setCards] = useState<VocabularyCard[]>(mockCards);
   const [progressList, setProgressList] = useState<CardProgress[]>(() =>
     mergeProgressForCards(mockCards, mockProgress),
@@ -79,15 +88,26 @@ export function useStudyProgress() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
     let isMounted = true;
-    const storedProgress = readStoredProgress();
+    const storedProgress = readStoredProgress(userId);
 
     setCards(mockCards);
     setProgressList(mergeProgressForCards(mockCards, mockProgress, storedProgress));
     setDataSource("mock");
     setIsHydrated(true);
 
-    fetchSupabaseStudyData()
+    if (!userId) {
+      setSyncError("Inicia sesion para guardar progreso y crear palabras propias.");
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    fetchSupabaseStudyData(userId)
       .then((studyData) => {
         if (!isMounted) {
           return;
@@ -119,15 +139,15 @@ export function useStudyProgress() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAuthLoading, userId]);
 
   useEffect(() => {
     if (!isHydrated) {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progressList));
-  }, [isHydrated, progressList]);
+    window.localStorage.setItem(getStorageKey(userId), JSON.stringify(progressList));
+  }, [isHydrated, progressList, userId]);
 
   const progressByCardId = useMemo(
     () => new Map(progressList.map((progress) => [progress.cardId, progress])),
@@ -158,14 +178,14 @@ export function useStudyProgress() {
         );
       });
 
-      if (dataSource === "supabase") {
-        void saveSupabaseProgress(updatedProgress).catch(() => {
+      if (dataSource === "supabase" && userId) {
+        void saveSupabaseProgress(updatedProgress, userId).catch(() => {
           setDataSource("mock");
           setSyncError("No se pudo guardar en Supabase. Progreso guardado localmente.");
         });
       }
     },
-    [dataSource, progressByCardId],
+    [dataSource, progressByCardId, userId],
   );
 
   const resetProgress = useCallback(() => {
@@ -173,15 +193,34 @@ export function useStudyProgress() {
 
     setProgressList(resetList);
 
-    if (dataSource === "supabase") {
-      void Promise.all(resetList.map((progress) => saveSupabaseProgress(progress))).catch(
+    if (dataSource === "supabase" && userId) {
+      void Promise.all(resetList.map((progress) => saveSupabaseProgress(progress, userId))).catch(
         () => {
           setDataSource("mock");
           setSyncError("No se pudo reiniciar en Supabase. Progreso reiniciado localmente.");
         },
       );
     }
-  }, [cards, dataSource]);
+  }, [cards, dataSource, userId]);
+
+  const createCard = useCallback(
+    async (input: NewVocabularyCardInput) => {
+      if (!userId) {
+        throw new Error("Inicia sesion para crear palabras propias.");
+      }
+
+      const createdCard = await createSupabaseCard(input, userId);
+      const createdProgress = createInitialProgress(createdCard.id, userId);
+
+      setCards((currentCards) => [...currentCards, createdCard]);
+      setProgressList((currentProgress) => [...currentProgress, createdProgress]);
+      setDataSource("supabase");
+      setSyncError(null);
+
+      return createdCard;
+    },
+    [userId],
+  );
 
   const visualDueCards = useMemo(
     () => getDueCards(cards, progressList, "visual"),
@@ -195,6 +234,7 @@ export function useStudyProgress() {
 
   return {
     cards,
+    createCard,
     dataSource,
     getProgress,
     isHydrated,

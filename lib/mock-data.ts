@@ -8,6 +8,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-mizu",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "mizu",
     japaneseKana: "みず",
     spanish: "agua",
@@ -17,6 +18,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-inu",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "inu",
     japaneseKana: "いぬ",
     spanish: "perro",
@@ -26,6 +28,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-neko",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "neko",
     japaneseKana: "ねこ",
     spanish: "gato",
@@ -35,6 +38,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-arigatou",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "arigatou",
     japaneseKana: "ありがとう",
     spanish: "gracias",
@@ -44,6 +48,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-sumimasen",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "sumimasen",
     japaneseKana: "すみません",
     spanish: "disculpa / perdón",
@@ -53,6 +58,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-konnichiwa",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "konnichiwa",
     japaneseKana: "こんにちは",
     spanish: "hola / buenas tardes",
@@ -62,6 +68,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-ohayou",
     type: "word",
+    isStarter: true,
     japaneseRomaji: "ohayou",
     japaneseKana: "おはよう",
     spanish: "buenos días",
@@ -71,6 +78,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-watashi-wa-david-desu",
     type: "phrase",
+    isStarter: true,
     japaneseRomaji: "watashi wa David desu",
     japaneseKana: "わたしはDavidです",
     spanish: "soy David",
@@ -80,6 +88,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-colombia-kara-kimashita",
     type: "phrase",
+    isStarter: true,
     japaneseRomaji: "Colombia kara kimashita",
     japaneseKana: "Colombiaからきました",
     spanish: "vengo de Colombia",
@@ -89,6 +98,7 @@ export const mockCards: VocabularyCard[] = [
   {
     id: "card-kore-wa-nan-desu-ka",
     type: "phrase",
+    isStarter: true,
     japaneseRomaji: "kore wa nan desu ka",
     japaneseKana: "これはなんですか",
     spanish: "¿qué es esto?",

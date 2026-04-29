@@ -2,6 +2,8 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.cards (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  is_starter boolean not null default false,
   type text not null check (type in ('word', 'phrase')),
   japanese_romaji text not null,
   japanese_kana text,
@@ -13,11 +15,17 @@ create table if not exists public.cards (
 );
 
 alter table public.cards
+  add column if not exists user_id uuid references auth.users(id) on delete cascade;
+
+alter table public.cards
+  add column if not exists is_starter boolean not null default false;
+
+alter table public.cards
   add column if not exists japanese_kana text;
 
 create table if not exists public.card_progress (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid,
+  user_id uuid not null references auth.users(id) on delete cascade,
   card_id uuid not null references public.cards(id) on delete cascade,
   visual_level int not null default 0 check (visual_level between 0 and 9),
   oral_level int not null default 0 check (oral_level between 0 and 9),
@@ -39,13 +47,27 @@ create table if not exists public.card_progress (
   constraint visual_level_covers_oral_level check (visual_level >= oral_level)
 );
 
+alter table public.card_progress
+  add column if not exists user_id uuid references auth.users(id) on delete cascade;
+
+delete from public.card_progress
+where user_id is null;
+
+alter table public.card_progress
+  alter column user_id set not null;
+
+drop index if exists card_progress_user_card_idx;
+drop index if exists card_progress_anonymous_card_idx;
+
 create unique index if not exists card_progress_user_card_idx
   on public.card_progress (user_id, card_id)
   where user_id is not null;
 
-create unique index if not exists card_progress_anonymous_card_idx
-  on public.card_progress (card_id)
-  where user_id is null;
+create index if not exists cards_user_id_idx
+  on public.cards (user_id);
+
+create index if not exists cards_is_starter_idx
+  on public.cards (is_starter);
 
 create index if not exists card_progress_visual_due_idx
   on public.card_progress (visual_due_at);
@@ -67,3 +89,74 @@ create trigger set_card_progress_updated_at
 before update on public.card_progress
 for each row
 execute function public.set_updated_at();
+
+alter table public.cards enable row level security;
+alter table public.card_progress enable row level security;
+
+drop policy if exists "cards_select_starter_or_own" on public.cards;
+drop policy if exists "cards_insert_own" on public.cards;
+drop policy if exists "cards_update_own" on public.cards;
+drop policy if exists "cards_delete_own" on public.cards;
+
+create policy "cards_select_starter_or_own"
+on public.cards
+for select
+to authenticated
+using (is_starter = true or user_id = auth.uid());
+
+create policy "cards_insert_own"
+on public.cards
+for insert
+to authenticated
+with check (user_id = auth.uid() and is_starter = false);
+
+create policy "cards_update_own"
+on public.cards
+for update
+to authenticated
+using (user_id = auth.uid() and is_starter = false)
+with check (user_id = auth.uid() and is_starter = false);
+
+create policy "cards_delete_own"
+on public.cards
+for delete
+to authenticated
+using (user_id = auth.uid() and is_starter = false);
+
+drop policy if exists "card_progress_select_own" on public.card_progress;
+drop policy if exists "card_progress_insert_own" on public.card_progress;
+drop policy if exists "card_progress_update_own" on public.card_progress;
+drop policy if exists "card_progress_delete_own" on public.card_progress;
+
+create policy "card_progress_select_own"
+on public.card_progress
+for select
+to authenticated
+using (user_id = auth.uid());
+
+create policy "card_progress_insert_own"
+on public.card_progress
+for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.cards
+    where cards.id = card_progress.card_id
+      and (cards.is_starter = true or cards.user_id = auth.uid())
+  )
+);
+
+create policy "card_progress_update_own"
+on public.card_progress
+for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+create policy "card_progress_delete_own"
+on public.card_progress
+for delete
+to authenticated
+using (user_id = auth.uid());

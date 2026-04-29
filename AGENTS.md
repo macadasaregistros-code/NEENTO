@@ -51,6 +51,10 @@ Rules:
 - Keep UI components reusable.
 - Avoid putting business logic directly in React components.
 - Use mock data first, but keep the code ready for Supabase.
+- Supabase writes require an authenticated user.
+- Starter cards are global with `is_starter = true`.
+- User-created cards must use `user_id = auth.uid()` and `is_starter = false`.
+- Keep RLS policies aligned with private user cards and per-user progress.
 
 ## Definition of done
 

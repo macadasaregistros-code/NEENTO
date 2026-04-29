@@ -17,6 +17,8 @@ export type CardStatus =
 export interface VocabularyCard {
   id: string;
   type: CardType;
+  userId?: string;
+  isStarter: boolean;
   japaneseRomaji: string;
   japaneseKana?: string;
   spanish: string;
@@ -24,6 +26,14 @@ export interface VocabularyCard {
   imageUrl?: string;
   audioUrl?: string;
   createdAt: string;
+}
+
+export interface NewVocabularyCardInput {
+  type: CardType;
+  japaneseRomaji: string;
+  japaneseKana?: string;
+  spanish: string;
+  category: string;
 }
 
 export interface CardProgress {
