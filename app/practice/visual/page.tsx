@@ -10,9 +10,23 @@ import { useStudyProgress } from "@/hooks/useStudyProgress";
 import type { ReviewResult } from "@/types/card";
 
 export default function VisualPracticePage() {
-  const { reviewCard, visualDueCards } = useStudyProgress();
+  const { cards, getProgress, reviewCard, visualDueCards } = useStudyProgress();
   const [feedback, setFeedback] = useState<ReviewResult | null>(null);
-  const current = visualDueCards[0];
+  const [isFreePractice, setIsFreePractice] = useState(false);
+  const [freePracticeIndex, setFreePracticeIndex] = useState(0);
+  const dueCurrent = visualDueCards[0];
+  const freeCurrentCard = cards[freePracticeIndex];
+  const current = isFreePractice
+    ? freeCurrentCard
+      ? {
+          card: freeCurrentCard,
+          progress: getProgress(freeCurrentCard),
+        }
+      : undefined
+    : dueCurrent;
+  const pendingLabel = isFreePractice
+    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} libre`
+    : `${visualDueCards.length} pendientes`;
 
   useEffect(() => {
     if (!feedback) {
@@ -28,8 +42,19 @@ export default function VisualPracticePage() {
       return;
     }
 
-    reviewCard(current.card.id, "visual", result);
+    if (isFreePractice) {
+      setFreePracticeIndex((index) => index + 1);
+    } else {
+      reviewCard(current.card.id, "visual", result);
+    }
+
     setFeedback(result);
+  }
+
+  function startFreePractice() {
+    setFeedback(null);
+    setFreePracticeIndex(0);
+    setIsFreePractice(true);
   }
 
   return (
@@ -47,7 +72,7 @@ export default function VisualPracticePage() {
             practica visual
           </p>
           <p className="text-sm font-bold text-slate-600">
-            {visualDueCards.length} pendientes
+            {pendingLabel}
           </p>
         </div>
       </header>
@@ -61,12 +86,12 @@ export default function VisualPracticePage() {
           {feedback === "success" ? (
             <>
               <Check aria-hidden="true" size={20} />
-              Acierto visual
+              {isFreePractice ? "Acierto libre" : "Acierto visual"}
             </>
           ) : (
             <>
               <X aria-hidden="true" size={20} />
-              Fallo visual
+              {isFreePractice ? "Fallo libre" : "Fallo visual"}
             </>
           )}
         </div>
@@ -81,6 +106,15 @@ export default function VisualPracticePage() {
         />
       ) : (
         <EmptyState
+          topAction={
+            <button
+              className="rounded-lg bg-emerald-600 px-5 py-4 text-sm font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.98]"
+              onClick={startFreePractice}
+              type="button"
+            >
+              Seguir practicando
+            </button>
+          }
           action={
             <Link
               className="rounded-lg bg-ink px-5 py-4 text-sm font-black text-white shadow-soft"
@@ -89,7 +123,11 @@ export default function VisualPracticePage() {
               Ver vocabulario
             </Link>
           }
-          description="No hay tarjetas visuales pendientes ahora. Vuelve mas tarde o revisa tu vocabulario."
+          description={
+            isFreePractice
+              ? "Terminaste una vuelta libre. Puedes repetir sin cambiar tus niveles."
+              : "No hay tarjetas visuales pendientes ahora. Puedes hacer practica libre sin cambiar tus niveles."
+          }
           title="Practica completa"
         />
       )}

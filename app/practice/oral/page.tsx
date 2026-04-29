@@ -10,9 +10,23 @@ import { useStudyProgress } from "@/hooks/useStudyProgress";
 import type { ReviewResult } from "@/types/card";
 
 export default function OralPracticePage() {
-  const { oralDueCards, reviewCard } = useStudyProgress();
+  const { cards, getProgress, oralDueCards, reviewCard } = useStudyProgress();
   const [feedback, setFeedback] = useState<ReviewResult | null>(null);
-  const current = oralDueCards[0];
+  const [isFreePractice, setIsFreePractice] = useState(false);
+  const [freePracticeIndex, setFreePracticeIndex] = useState(0);
+  const dueCurrent = oralDueCards[0];
+  const freeCurrentCard = cards[freePracticeIndex];
+  const current = isFreePractice
+    ? freeCurrentCard
+      ? {
+          card: freeCurrentCard,
+          progress: getProgress(freeCurrentCard),
+        }
+      : undefined
+    : dueCurrent;
+  const pendingLabel = isFreePractice
+    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} libre`
+    : `${oralDueCards.length} pendientes`;
 
   useEffect(() => {
     if (!feedback) {
@@ -28,8 +42,19 @@ export default function OralPracticePage() {
       return;
     }
 
-    reviewCard(current.card.id, "oral", result);
+    if (isFreePractice) {
+      setFreePracticeIndex((index) => index + 1);
+    } else {
+      reviewCard(current.card.id, "oral", result);
+    }
+
     setFeedback(result);
+  }
+
+  function startFreePractice() {
+    setFeedback(null);
+    setFreePracticeIndex(0);
+    setIsFreePractice(true);
   }
 
   return (
@@ -47,7 +72,7 @@ export default function OralPracticePage() {
             practica oral
           </p>
           <p className="text-sm font-bold text-slate-600">
-            {oralDueCards.length} pendientes
+            {pendingLabel}
           </p>
         </div>
       </header>
@@ -61,12 +86,12 @@ export default function OralPracticePage() {
           {feedback === "success" ? (
             <>
               <Check aria-hidden="true" size={20} />
-              Acierto oral
+              {isFreePractice ? "Acierto libre" : "Acierto oral"}
             </>
           ) : (
             <>
               <X aria-hidden="true" size={20} />
-              Fallo oral
+              {isFreePractice ? "Fallo libre" : "Fallo oral"}
             </>
           )}
         </div>
@@ -81,6 +106,15 @@ export default function OralPracticePage() {
         />
       ) : (
         <EmptyState
+          topAction={
+            <button
+              className="rounded-lg bg-emerald-600 px-5 py-4 text-sm font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.98]"
+              onClick={startFreePractice}
+              type="button"
+            >
+              Seguir practicando
+            </button>
+          }
           action={
             <Link
               className="rounded-lg bg-ink px-5 py-4 text-sm font-black text-white shadow-soft"
@@ -89,7 +123,11 @@ export default function OralPracticePage() {
               Ver vocabulario
             </Link>
           }
-          description="No hay tarjetas orales pendientes ahora. Vuelve mas tarde o revisa tu vocabulario."
+          description={
+            isFreePractice
+              ? "Terminaste una vuelta libre. Puedes repetir sin cambiar tus niveles."
+              : "No hay tarjetas orales pendientes ahora. Puedes hacer practica libre sin cambiar tus niveles."
+          }
           title="Practica completa"
         />
       )}

@@ -3,12 +3,19 @@ import type { ReactNode } from "react";
 interface EmptyStateProps {
   title: string;
   description: string;
+  topAction?: ReactNode;
   action?: ReactNode;
 }
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  topAction,
+  action,
+}: EmptyStateProps) {
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-5 py-16 text-center">
+      {topAction}
       <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-white text-3xl shadow-soft">
         OK
       </div>
