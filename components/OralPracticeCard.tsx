@@ -1,35 +1,55 @@
 "use client";
 
-import { ArrowUp, Check, Mic, MicOff, RotateCcw, Square, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Mic, MicOff, RotateCcw, Square, Volume2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
+import { JapanesePrompt } from "@/components/JapanesePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { triggerHaptic } from "@/lib/haptics";
-import { compareJapaneseSpeech } from "@/lib/oral";
-import type { CardProgress, ReviewResult, VocabularyCard } from "@/types/card";
+import { compareJapaneseSpeech, compareRomajiSpeech } from "@/lib/oral";
+import { getExpectedSpeech, speakText } from "@/lib/speech";
+import type {
+  CardProgress,
+  PracticeDirection,
+  ReviewResult,
+  VocabularyCard,
+} from "@/types/card";
 
 interface OralPracticeCardProps {
   card: VocabularyCard;
+  direction: PracticeDirection;
   progress: CardProgress;
   onReview: (result: ReviewResult) => void;
 }
 
-const matchLabels = {
-  match: "Correcto. Avanzando",
-  partial: "No coincide lo suficiente",
-  miss: "No coincide con la respuesta",
+type OralStatus = "idle" | "retry" | "success" | "fail";
+
+const statusCopy: Record<OralStatus, string> = {
+  idle: "Di la respuesta. La app validara automaticamente.",
+  retry: "No coincidio. Intenta una vez mas.",
+  success: "Correcto. Avanzando.",
+  fail: "Respuesta revelada. Avanzando.",
 };
 
-const matchStyles = {
-  match: "bg-green-100 text-green-800 ring-green-200",
-  partial: "bg-amber-100 text-amber-800 ring-amber-200",
-  miss: "bg-red-100 text-red-800 ring-red-200",
+const statusStyles: Record<OralStatus, string> = {
+  idle: "bg-slate-100 text-slate-500 ring-slate-200",
+  retry: "bg-amber-100 text-amber-800 ring-amber-200",
+  success: "bg-green-100 text-green-800 ring-green-200",
+  fail: "bg-red-100 text-red-800 ring-red-200",
 };
 
-export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardProps) {
-  const [isRevealed, setIsRevealed] = useState(false);
+export function OralPracticeCard({
+  card,
+  direction,
+  progress,
+  onReview,
+}: OralPracticeCardProps) {
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [status, setStatus] = useState<OralStatus>("idle");
+  const [speechMessage, setSpeechMessage] = useState<string | null>(null);
   const {
     alternatives,
     confidence,
@@ -43,48 +63,92 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
     stopListening,
     transcript,
   } = useSpeechRecognition();
+  const isJapaneseAnswer = direction === "es_to_jp";
+  const recognitionLanguage = isJapaneseAnswer ? "ja-JP" : "es-ES";
+  const hasSpeechResult = Boolean(rawTranscript || transcript);
 
-  const match = useMemo(
-    () =>
-      compareJapaneseSpeech(
+  const match = useMemo(() => {
+    if (isJapaneseAnswer) {
+      return compareJapaneseSpeech(
         card.japaneseRomaji,
+        card.japaneseKana,
         rawTranscript,
         transcript,
         alternatives,
-      ),
-    [alternatives, card.japaneseRomaji, rawTranscript, transcript],
-  );
-  const hasSpeechResult = Boolean(rawTranscript || transcript);
+      );
+    }
 
-  const review = useCallback(
-    (result: ReviewResult) => {
-      if (isLocked) {
-        return;
-      }
+    return compareRomajiSpeech(card.spanish, transcript || rawTranscript);
+  }, [
+    alternatives,
+    card.japaneseKana,
+    card.japaneseRomaji,
+    card.spanish,
+    isJapaneseAnswer,
+    rawTranscript,
+    transcript,
+  ]);
 
-      setIsLocked(true);
-      triggerHaptic(result === "success" ? "success" : "warning");
-      stopListening();
-      onReview(result);
-    },
-    [isLocked, onReview, stopListening],
-  );
+  useEffect(() => {
+    setFailedAttempts(0);
+    setIsLocked(false);
+    setIsRevealed(false);
+    setStatus("idle");
+    setSpeechMessage(null);
+    resetTranscript();
+    stopListening();
+  }, [card.id, direction, resetTranscript, stopListening]);
 
   useEffect(() => {
     if (!isFinal || !hasSpeechResult || isLocked) {
       return;
     }
 
-    const result: ReviewResult = match === "match" ? "success" : "fail";
+    if (match === "match") {
+      setStatus("success");
+      setIsLocked(true);
+      stopListening();
+      triggerHaptic("success");
 
-    if (result === "fail") {
-      setIsRevealed(true);
+      const timeout = window.setTimeout(() => onReview("success"), 850);
+      return () => window.clearTimeout(timeout);
     }
 
-    const timeout = window.setTimeout(() => review(result), 950);
+    const nextFailedAttempts = failedAttempts + 1;
 
-    return () => window.clearTimeout(timeout);
-  }, [hasSpeechResult, isFinal, isLocked, match, review]);
+    setFailedAttempts(nextFailedAttempts);
+    triggerHaptic("warning");
+
+    if (nextFailedAttempts >= 2) {
+      setStatus("fail");
+      setIsRevealed(true);
+      setIsLocked(true);
+      stopListening();
+
+      const timeout = window.setTimeout(() => onReview("fail"), 1600);
+      return () => window.clearTimeout(timeout);
+    }
+
+    setStatus("retry");
+    resetTranscript();
+  }, [
+    failedAttempts,
+    hasSpeechResult,
+    isFinal,
+    isLocked,
+    match,
+    onReview,
+    resetTranscript,
+    stopListening,
+  ]);
+
+  function handleSpeak() {
+    const expectedSpeech = getExpectedSpeech(card, direction);
+    const didSpeak = speakText(expectedSpeech.text, expectedSpeech.lang);
+
+    triggerHaptic("light");
+    setSpeechMessage(didSpeak ? "Reproduciendo respuesta." : "Voz no disponible.");
+  }
 
   return (
     <div className="flex flex-1 flex-col justify-center gap-4">
@@ -105,13 +169,14 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
         </div>
 
         <div className="space-y-5">
-          <div className="rounded-lg bg-mist p-5">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-              Produce en japones
-            </p>
-            <h1 className="mt-3 text-balance text-4xl font-black leading-tight tracking-normal text-ink">
-              {card.spanish}
-            </h1>
+          <div className="flex min-h-44 items-center justify-center rounded-lg bg-mist p-5 text-center">
+            {isJapaneseAnswer ? (
+              <h1 className="text-balance text-5xl font-black leading-[1.05] tracking-normal text-ink">
+                {card.spanish}
+              </h1>
+            ) : (
+              <JapanesePrompt card={card} />
+            )}
           </div>
 
           <div className="space-y-3">
@@ -122,8 +187,10 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
                     ? "bg-slate-800 shadow-slate-200"
                     : "bg-emerald-600 shadow-emerald-200"
                 }`}
-                disabled={!isSupported}
-                onClick={isListening ? stopListening : startListening}
+                disabled={!isSupported || isLocked}
+                onClick={() =>
+                  isListening ? stopListening() : startListening(recognitionLanguage)
+                }
                 type="button"
               >
                 {isListening ? (
@@ -134,14 +201,26 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
                 ) : (
                   <>
                     <Mic aria-hidden="true" size={19} />
-                    Grabar en japones
+                    Grabar
                   </>
                 )}
               </button>
               <button
+                aria-label="Escuchar respuesta"
+                className="flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
+                onClick={handleSpeak}
+                type="button"
+              >
+                <Volume2 aria-hidden="true" size={20} />
+              </button>
+              <button
                 aria-label="Limpiar intento"
                 className="flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
-                onClick={resetTranscript}
+                disabled={isLocked}
+                onClick={() => {
+                  setStatus("idle");
+                  resetTranscript();
+                }}
                 type="button"
               >
                 <RotateCcw aria-hidden="true" size={19} />
@@ -161,6 +240,16 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
               </p>
             ) : null}
 
+            <div className={`rounded-lg px-4 py-3 text-sm font-bold ring-1 ${statusStyles[status]}`}>
+              {statusCopy[status]} Intentos: {failedAttempts}/2
+            </div>
+
+            {speechMessage ? (
+              <p className="rounded-lg bg-white px-4 py-3 text-sm font-bold text-slate-500 ring-1 ring-slate-200">
+                {speechMessage}
+              </p>
+            ) : null}
+
             {hasSpeechResult ? (
               <div className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
@@ -169,67 +258,33 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
                 <p className="mt-2 text-xl font-black text-ink">
                   {transcript || "Audio recibido"}
                 </p>
-                <span
-                  className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${matchStyles[match]}`}
-                >
-                  {matchLabels[match]}
-                </span>
                 {confidence > 0 ? (
                   <p className="mt-2 text-xs font-bold text-slate-400">
                     Confianza: {Math.round(confidence * 100)}%
                   </p>
                 ) : null}
               </div>
-            ) : (
-              <p className="rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500">
-                Di la respuesta en voz alta. Se validara automaticamente.
-              </p>
-            )}
+            ) : null}
           </div>
 
           {isRevealed ? (
             <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-                Respuesta romaji
+                Respuesta
               </p>
-              <p className="mt-2 text-3xl font-black leading-tight text-emerald-950">
-                {card.japaneseRomaji}
-              </p>
+              <div className="mt-3">
+                {isJapaneseAnswer ? (
+                  <JapanesePrompt card={card} tone="muted" />
+                ) : (
+                  <p className="text-2xl font-black text-emerald-950">
+                    {card.spanish}
+                  </p>
+                )}
+              </div>
             </div>
-          ) : (
-            <button
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-black text-white shadow-lg shadow-slate-200 transition active:scale-[0.98]"
-              onClick={() => {
-                triggerHaptic("light");
-                setIsRevealed(true);
-              }}
-              type="button"
-            >
-              <ArrowUp aria-hidden="true" size={18} />
-              Revelar respuesta
-            </button>
-          )}
+          ) : null}
         </div>
       </article>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          className="flex h-14 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-black text-white shadow-lg shadow-red-200 transition active:scale-[0.98]"
-          onClick={() => review("fail")}
-          type="button"
-        >
-          <X aria-hidden="true" size={20} />
-          Fallo oral
-        </button>
-        <button
-          className="flex h-14 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 text-sm font-black text-white shadow-lg shadow-green-200 transition active:scale-[0.98]"
-          onClick={() => review("success")}
-          type="button"
-        >
-          <Check aria-hidden="true" size={20} />
-          Acierto oral
-        </button>
-      </div>
     </div>
   );
 }

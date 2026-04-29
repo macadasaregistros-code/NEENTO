@@ -4,6 +4,8 @@ export type ReviewMode = "visual" | "oral";
 
 export type ReviewResult = "success" | "fail";
 
+export type PracticeDirection = "jp_to_es" | "es_to_jp";
+
 export type CardStatus =
   | "new"
   | "learning"
@@ -16,6 +18,7 @@ export interface VocabularyCard {
   id: string;
   type: CardType;
   japaneseRomaji: string;
+  japaneseKana?: string;
   spanish: string;
   category: string;
   imageUrl?: string;

@@ -1,23 +1,31 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowUp, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
+import { JapanesePrompt } from "@/components/JapanesePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { triggerHaptic } from "@/lib/haptics";
-import type { CardProgress, ReviewResult, VocabularyCard } from "@/types/card";
+import type {
+  CardProgress,
+  PracticeDirection,
+  ReviewResult,
+  VocabularyCard,
+} from "@/types/card";
 
 interface SwipeCardProps {
   card: VocabularyCard;
+  direction: PracticeDirection;
   progress: CardProgress;
   onReview: (result: ReviewResult) => void;
 }
 
-export function SwipeCard({ card, progress, onReview }: SwipeCardProps) {
+export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const isJapaneseFirst = direction === "jp_to_es";
 
   function review(result: ReviewResult) {
     if (isLocked) {
@@ -97,16 +105,26 @@ export function SwipeCard({ card, progress, onReview }: SwipeCardProps) {
         )}
 
         <div className="min-h-48 space-y-5">
-          <h1 className="text-balance text-5xl font-black leading-[1.05] tracking-normal text-ink">
-            {card.japaneseRomaji}
-          </h1>
+          {isJapaneseFirst ? (
+            <JapanesePrompt card={card} />
+          ) : (
+            <h1 className="text-balance text-center text-5xl font-black leading-[1.05] tracking-normal text-ink">
+              {card.spanish}
+            </h1>
+          )}
 
           {isRevealed ? (
             <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-                Traduccion
+                Respuesta
               </p>
-              <p className="mt-2 text-2xl font-black text-emerald-950">{card.spanish}</p>
+              <div className="mt-3">
+                {isJapaneseFirst ? (
+                  <p className="text-2xl font-black text-emerald-950">{card.spanish}</p>
+                ) : (
+                  <JapanesePrompt card={card} tone="muted" />
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500">
@@ -117,23 +135,19 @@ export function SwipeCard({ card, progress, onReview }: SwipeCardProps) {
         </div>
       </motion.article>
 
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          className="flex h-14 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-black text-white shadow-lg shadow-red-200 transition active:scale-[0.98]"
-          onClick={() => review("fail")}
-          type="button"
-        >
-          <X aria-hidden="true" size={20} />
+      <div className="grid grid-cols-3 gap-2 rounded-lg bg-white/80 p-2 text-center text-[0.7rem] font-black uppercase tracking-[0.12em] text-slate-500 ring-1 ring-white">
+        <div className="flex items-center justify-center gap-1">
+          <ArrowLeft aria-hidden="true" size={15} />
           Fallo
-        </button>
-        <button
-          className="flex h-14 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 text-sm font-black text-white shadow-lg shadow-green-200 transition active:scale-[0.98]"
-          onClick={() => review("success")}
-          type="button"
-        >
-          <Check aria-hidden="true" size={20} />
+        </div>
+        <div className="flex items-center justify-center gap-1">
+          <ArrowUp aria-hidden="true" size={15} />
+          Revelar
+        </div>
+        <div className="flex items-center justify-center gap-1">
+          <ArrowRight aria-hidden="true" size={15} />
           Acierto
-        </button>
+        </div>
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ export function useSpeechRecognition() {
     setIsListening(false);
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback((lang = "ja-JP") => {
     const SpeechRecognitionConstructor = getSpeechRecognitionConstructor();
 
     if (!SpeechRecognitionConstructor) {
@@ -80,7 +80,7 @@ export function useSpeechRecognition() {
 
     const recognition = new SpeechRecognitionConstructor();
 
-    recognition.lang = "ja-JP";
+    recognition.lang = lang;
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 5;

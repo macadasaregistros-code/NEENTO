@@ -4,14 +4,16 @@ import { ArrowLeft, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { DirectionToggle } from "@/components/DirectionToggle";
 import { EmptyState } from "@/components/EmptyState";
 import { SwipeCard } from "@/components/SwipeCard";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
-import type { ReviewResult } from "@/types/card";
+import type { PracticeDirection, ReviewResult } from "@/types/card";
 
 export default function VisualPracticePage() {
   const { cards, getProgress, reviewCard, visualDueCards } = useStudyProgress();
   const [feedback, setFeedback] = useState<ReviewResult | null>(null);
+  const [direction, setDirection] = useState<PracticeDirection>("jp_to_es");
   const [isFreePractice, setIsFreePractice] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
   const dueCurrent = visualDueCards[0];
@@ -77,6 +79,8 @@ export default function VisualPracticePage() {
         </div>
       </header>
 
+      <DirectionToggle value={direction} onChange={setDirection} />
+
       {feedback ? (
         <div
           className={`pointer-events-none absolute inset-x-4 top-20 z-20 flex h-14 items-center justify-center gap-2 rounded-lg text-sm font-black text-white shadow-soft ${
@@ -100,7 +104,8 @@ export default function VisualPracticePage() {
       {current ? (
         <SwipeCard
           card={current.card}
-          key={current.card.id}
+          direction={direction}
+          key={`${current.card.id}-${direction}`}
           onReview={handleReview}
           progress={current.progress}
         />

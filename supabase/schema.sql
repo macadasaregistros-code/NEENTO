@@ -4,12 +4,16 @@ create table if not exists public.cards (
   id uuid primary key default gen_random_uuid(),
   type text not null check (type in ('word', 'phrase')),
   japanese_romaji text not null,
+  japanese_kana text,
   spanish text not null,
   category text not null,
   image_url text,
   audio_url text,
   created_at timestamptz not null default now()
 );
+
+alter table public.cards
+  add column if not exists japanese_kana text;
 
 create table if not exists public.card_progress (
   id uuid primary key default gen_random_uuid(),

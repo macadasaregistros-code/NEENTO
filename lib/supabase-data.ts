@@ -6,6 +6,7 @@ interface CardRow {
   id: string;
   type: CardType;
   japanese_romaji: string;
+  japanese_kana?: string | null;
   spanish: string;
   category: string;
   image_url: string | null;
@@ -44,6 +45,7 @@ function toVocabularyCard(row: CardRow): VocabularyCard {
     id: row.id,
     type: row.type,
     japaneseRomaji: row.japanese_romaji,
+    japaneseKana: row.japanese_kana ?? undefined,
     spanish: row.spanish,
     category: row.category,
     imageUrl: row.image_url ?? undefined,

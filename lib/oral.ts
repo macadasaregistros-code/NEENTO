@@ -94,12 +94,16 @@ export function compareRomajiSpeech(expected: string, transcript: string): OralM
 
 export function compareJapaneseSpeech(
   expectedRomaji: string,
+  expectedKana: string | undefined,
   rawTranscript: string,
   displayTranscript: string,
   alternatives: SpeechAlternative[] = [],
 ): OralMatch {
   const normalizedExpected = normalizeSpokenText(expectedRomaji);
-  const variants = recognitionVariantsByRomaji[normalizedExpected] ?? [];
+  const variants = [
+    ...(recognitionVariantsByRomaji[normalizedExpected] ?? []),
+    ...(expectedKana ? [expectedKana] : []),
+  ];
   const candidates = getRecognitionCandidates(rawTranscript, displayTranscript, alternatives);
   const compactCandidates = candidates.map(compactRecognitionText);
   const compactVariants = variants.map(compactRecognitionText);

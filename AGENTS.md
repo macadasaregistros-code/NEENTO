@@ -6,8 +6,9 @@ Mobile-first Japanese vocabulary spaced repetition app.
 
 ## Core rules
 
-- Use romaji only for Japanese content.
-- Do not use hiragana, katakana, or kanji yet.
+- Use romaji for Japanese content and pronunciation support.
+- Hiragana and katakana are allowed only in `japaneseKana` fields and Japanese visual UI.
+- Do not use kanji in user-facing Japanese content yet.
 - The app is focused on practical Japanese communication.
 - Prioritize clean, maintainable TypeScript.
 - Keep UI mobile-first.
