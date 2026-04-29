@@ -3,9 +3,12 @@
 import { BarChart3, BookOpen, Eye, Mic, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 
 export default function HomePage() {
+  const { config } = useLearningMode();
+  const copy = config.copy.home;
   const {
     cards,
     dataSource,
@@ -28,13 +31,13 @@ export default function HomePage() {
     <div className="flex flex-1 flex-col gap-6">
       <header className="pt-4">
         <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">
-          Romaji SRS
+          {copy.titleKicker}
         </p>
         <h1 className="mt-2 text-5xl font-black leading-none tracking-normal text-ink">
           Neento
         </h1>
         <p className="mt-3 text-base leading-7 text-slate-600">
-          Practica palabras y frases utiles con sesiones cortas para movil.
+          {copy.description}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-500 shadow-sm ring-1 ring-slate-200">
@@ -49,20 +52,20 @@ export default function HomePage() {
       </header>
 
       <section className="rounded-lg bg-white p-5 shadow-soft">
-        <p className="text-sm font-bold text-slate-500">Pendientes hoy</p>
+        <p className="text-sm font-bold text-slate-500">{copy.pendingToday}</p>
         <div className="mt-2 flex items-end justify-between gap-4">
           <div>
             <p className="text-6xl font-black leading-none text-ink">
               {visualDueCards.length + oralDueCards.length}
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-500">
-              repasos listos
+              {copy.readyReviews}
             </p>
           </div>
           <div className="grid gap-2 text-right">
             <div className="rounded-lg bg-emerald-50 px-4 py-3">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
-                visual
+                {copy.visual}
               </p>
               <p className="mt-1 text-lg font-black text-emerald-950">
                 {visualDueCards.length}
@@ -70,7 +73,7 @@ export default function HomePage() {
             </div>
             <div className="rounded-lg bg-sky-50 px-4 py-3">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">
-                oral
+                {copy.oral}
               </p>
               <p className="mt-1 text-lg font-black text-sky-950">
                 {oralDueCards.length}
@@ -83,11 +86,11 @@ export default function HomePage() {
       <section className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
           <p className="text-3xl font-black text-ink">{cards.length}</p>
-          <p className="mt-1 text-sm font-semibold text-slate-500">tarjetas</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">{copy.cards}</p>
         </div>
         <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
           <p className="text-3xl font-black text-ink">{reviewedCount}/{cards.length}</p>
-          <p className="mt-1 text-sm font-semibold text-slate-500">con avance</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">{copy.progressed}</p>
         </div>
       </section>
 
@@ -98,7 +101,7 @@ export default function HomePage() {
         >
           <span className="flex items-center gap-3">
             <Eye aria-hidden="true" size={22} />
-            Modo visual
+            {copy.visual}
           </span>
           <span>{visualDueCards.length}</span>
         </Link>
@@ -109,7 +112,7 @@ export default function HomePage() {
         >
           <span className="flex items-center gap-3">
             <Mic aria-hidden="true" size={22} />
-            Modo oral
+            {copy.oral}
           </span>
           <span>{oralDueCards.length}</span>
         </Link>
@@ -119,7 +122,7 @@ export default function HomePage() {
           href="/vocabulary"
         >
           <BookOpen aria-hidden="true" size={22} />
-          Vocabulario
+          {copy.vocabulary}
         </Link>
 
         <button
@@ -128,7 +131,7 @@ export default function HomePage() {
           type="button"
         >
           <BarChart3 aria-hidden="true" size={22} />
-          Estadisticas
+          {copy.stats}
         </button>
 
         <button
@@ -137,7 +140,7 @@ export default function HomePage() {
           type="button"
         >
           <RotateCcw aria-hidden="true" size={17} />
-          Reiniciar progreso local
+          {copy.resetProgress}
         </button>
       </section>
     </div>

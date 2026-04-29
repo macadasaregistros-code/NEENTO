@@ -1,3 +1,6 @@
+"use client";
+
+import { useLearningMode } from "@/hooks/useLearningMode";
 import type { CardStatus } from "@/types/card";
 
 const statusStyles: Record<CardStatus, string> = {
@@ -9,25 +12,18 @@ const statusStyles: Record<CardStatus, string> = {
   difficult: "bg-red-100 text-red-800 ring-red-200",
 };
 
-const statusLabels: Record<CardStatus, string> = {
-  new: "nueva",
-  learning: "aprendiendo",
-  in_progress: "en progreso",
-  strong: "fuerte",
-  mastered: "dominada",
-  difficult: "dificil",
-};
-
 interface ProgressBadgeProps {
   status: CardStatus;
 }
 
 export function ProgressBadge({ status }: ProgressBadgeProps) {
+  const { config } = useLearningMode();
+
   return (
     <span
       className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusStyles[status]}`}
     >
-      {statusLabels[status]}
+      {config.copy.status[status]}
     </span>
   );
 }

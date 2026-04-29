@@ -1,10 +1,14 @@
 export type CardType = "word" | "phrase";
 
+export type LearningMode = "ja_es" | "ko_es";
+
+export type LanguageCode = "ja" | "es" | "ko";
+
 export type ReviewMode = "visual" | "oral";
 
 export type ReviewResult = "success" | "fail";
 
-export type PracticeDirection = "jp_to_es" | "es_to_jp";
+export type PracticeDirection = "learning_to_support" | "support_to_learning";
 
 export type CardStatus =
   | "new"
@@ -19,9 +23,16 @@ export interface VocabularyCard {
   type: CardType;
   userId?: string;
   isStarter: boolean;
-  japaneseRomaji: string;
+  learningMode: LearningMode;
+  learningLanguage: LanguageCode;
+  supportLanguage: LanguageCode;
+  learningText: string;
+  learningReading?: string;
+  supportText: string;
+  supportReading?: string;
+  japaneseRomaji?: string;
   japaneseKana?: string;
-  spanish: string;
+  spanish?: string;
   category: string;
   imageUrl?: string;
   audioUrl?: string;
@@ -30,9 +41,11 @@ export interface VocabularyCard {
 
 export interface NewVocabularyCardInput {
   type: CardType;
-  japaneseRomaji: string;
-  japaneseKana?: string;
-  spanish: string;
+  learningMode: LearningMode;
+  learningText: string;
+  learningReading?: string;
+  supportText: string;
+  supportReading?: string;
   category: string;
 }
 

@@ -2,14 +2,16 @@
 
 ## Project
 
-Mobile-first Japanese vocabulary spaced repetition app.
+Mobile-first spaced repetition app for Japanese/Spanish and Korean/Spanish vocabulary.
 
 ## Core rules
 
 - Use romaji for Japanese content and pronunciation support.
 - Hiragana and katakana are allowed only in `japaneseKana` fields and Japanese visual UI.
 - Do not use kanji in user-facing Japanese content yet.
-- The app is focused on practical Japanese communication.
+- Hangul is allowed for Korean mode.
+- Use neutral learning/support card fields for new app code; legacy Japanese fields are compatibility only.
+- The app is focused on practical communication in the active learning mode.
 - Prioritize clean, maintainable TypeScript.
 - Keep UI mobile-first.
 - Host target: Vercel.

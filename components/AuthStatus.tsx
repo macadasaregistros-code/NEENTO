@@ -4,10 +4,13 @@ import { LogIn, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { triggerHaptic } from "@/lib/haptics";
 
 export function AuthStatus() {
   const { isLoading, signOut, user } = useAuthSession();
+  const { config } = useLearningMode();
+  const copy = config.copy.auth;
 
   if (isLoading) {
     return (
@@ -23,7 +26,7 @@ export function AuthStatus() {
         onClick={() => triggerHaptic("light")}
       >
         <LogIn aria-hidden="true" size={17} />
-        Iniciar sesion
+        {copy.login}
       </Link>
     );
   }
@@ -35,7 +38,7 @@ export function AuthStatus() {
         <span className="truncate font-bold text-slate-600">{user.email}</span>
       </div>
       <button
-        aria-label="Cerrar sesion"
+        aria-label={copy.logout}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
         onClick={() => {
           triggerHaptic("light");

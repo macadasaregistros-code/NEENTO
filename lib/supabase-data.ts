@@ -3,6 +3,8 @@ import { createInitialProgress, normalizeProgress } from "@/lib/srs";
 import type {
   CardProgress,
   CardType,
+  LanguageCode,
+  LearningMode,
   NewVocabularyCardInput,
   VocabularyCard,
 } from "@/types/card";
@@ -12,6 +14,13 @@ interface CardRow {
   user_id: string | null;
   is_starter: boolean;
   type: CardType;
+  learning_mode?: LearningMode | null;
+  learning_language?: LanguageCode | null;
+  support_language?: LanguageCode | null;
+  learning_text?: string | null;
+  learning_reading?: string | null;
+  support_text?: string | null;
+  support_reading?: string | null;
   japanese_romaji: string;
   japanese_kana?: string | null;
   spanish: string;
@@ -47,12 +56,40 @@ interface StudyData {
   progressList: CardProgress[];
 }
 
+function getLegacyMode(row: CardRow): LearningMode {
+  return row.learning_mode ?? "ja_es";
+}
+
+function getLegacyLearningLanguage(mode: LearningMode): LanguageCode {
+  return mode === "ko_es" ? "es" : "ja";
+}
+
+function getLegacySupportLanguage(mode: LearningMode): LanguageCode {
+  return mode === "ko_es" ? "ko" : "es";
+}
+
 function toVocabularyCard(row: CardRow): VocabularyCard {
+  const learningMode = getLegacyMode(row);
+  const learningText =
+    row.learning_text ??
+    (learningMode === "ja_es" ? row.japanese_kana ?? row.japanese_romaji : row.japanese_romaji);
+  const learningReading =
+    row.learning_reading ??
+    (learningMode === "ja_es" ? row.japanese_romaji : undefined);
+  const supportText = row.support_text ?? row.spanish;
+
   return {
     id: row.id,
     userId: row.user_id ?? undefined,
     isStarter: row.is_starter,
     type: row.type,
+    learningMode,
+    learningLanguage: row.learning_language ?? getLegacyLearningLanguage(learningMode),
+    supportLanguage: row.support_language ?? getLegacySupportLanguage(learningMode),
+    learningText,
+    learningReading: learningReading ?? undefined,
+    supportText,
+    supportReading: row.support_reading ?? undefined,
     japaneseRomaji: row.japanese_romaji,
     japaneseKana: row.japanese_kana ?? undefined,
     spanish: row.spanish,
@@ -192,13 +229,25 @@ export async function createSupabaseCard(
   input: NewVocabularyCardInput,
   userId: string,
 ): Promise<VocabularyCard> {
+  const isJapaneseMode = input.learningMode === "ja_es";
+  const learningText = input.learningText.trim();
+  const learningReading = input.learningReading?.trim() || null;
+  const supportText = input.supportText.trim();
+  const supportReading = input.supportReading?.trim() || null;
   const payload = {
     user_id: userId,
     is_starter: false,
     type: input.type,
-    japanese_romaji: input.japaneseRomaji.trim(),
-    japanese_kana: input.japaneseKana?.trim() || null,
-    spanish: input.spanish.trim(),
+    learning_mode: input.learningMode,
+    learning_language: isJapaneseMode ? "ja" : "es",
+    support_language: isJapaneseMode ? "es" : "ko",
+    learning_text: learningText,
+    learning_reading: learningReading,
+    support_text: supportText,
+    support_reading: supportReading,
+    japanese_romaji: isJapaneseMode ? learningReading ?? learningText : learningText,
+    japanese_kana: isJapaneseMode && learningReading !== learningText ? learningText : null,
+    spanish: supportText,
     category: input.category.trim(),
   };
   const { data, error } = await supabase

@@ -5,9 +5,11 @@ import { ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
-import { JapanesePrompt } from "@/components/JapanesePrompt";
+import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { triggerHaptic } from "@/lib/haptics";
+import { getAnswerSide, getFirstSide, getSideContent } from "@/lib/learning";
 import type {
   CardProgress,
   PracticeDirection,
@@ -25,7 +27,10 @@ interface SwipeCardProps {
 export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const isJapaneseFirst = direction === "jp_to_es";
+  const { config } = useLearningMode();
+  const copy = config.copy;
+  const firstContent = getSideContent(card, getFirstSide(direction));
+  const answerContent = getSideContent(card, getAnswerSide(direction));
 
   function review(result: ReviewResult) {
     if (isLocked) {
@@ -78,7 +83,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
               {card.category}
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              {card.type === "word" ? "palabra" : "frase"}
+              {card.type === "word" ? copy.common.word : copy.common.phrase}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -99,37 +104,27 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
         ) : (
           <div className="mb-7 flex h-32 items-center justify-center rounded-lg bg-mist">
             <span className="text-4xl font-black text-slate-300">
-              {card.japaneseRomaji.slice(0, 2).toUpperCase()}
+              {card.learningText.slice(0, 2).toUpperCase()}
             </span>
           </div>
         )}
 
         <div className="min-h-48 space-y-5">
-          {isJapaneseFirst ? (
-            <JapanesePrompt card={card} />
-          ) : (
-            <h1 className="text-balance text-center text-5xl font-black leading-[1.05] tracking-normal text-ink">
-              {card.spanish}
-            </h1>
-          )}
+          <LanguagePrompt content={firstContent} />
 
           {isRevealed ? (
             <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-                Respuesta
+                {copy.practice.answer}
               </p>
               <div className="mt-3">
-                {isJapaneseFirst ? (
-                  <p className="text-2xl font-black text-emerald-950">{card.spanish}</p>
-                ) : (
-                  <JapanesePrompt card={card} tone="muted" />
-                )}
+                <LanguagePrompt content={answerContent} tone="muted" />
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500">
               <ArrowUp aria-hidden="true" size={18} />
-              Desliza arriba para ver traduccion
+              {copy.practice.revealHint}
             </div>
           )}
         </div>
@@ -138,15 +133,15 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
       <div className="grid grid-cols-3 gap-2 rounded-lg bg-white/80 p-2 text-center text-[0.7rem] font-black uppercase tracking-[0.12em] text-slate-500 ring-1 ring-white">
         <div className="flex items-center justify-center gap-1">
           <ArrowLeft aria-hidden="true" size={15} />
-          Fallo
+          {copy.common.fail}
         </div>
         <div className="flex items-center justify-center gap-1">
           <ArrowUp aria-hidden="true" size={15} />
-          Revelar
+          {copy.practice.revealLabel}
         </div>
         <div className="flex items-center justify-center gap-1">
           <ArrowRight aria-hidden="true" size={15} />
-          Acierto
+          {copy.common.success}
         </div>
       </div>
     </div>

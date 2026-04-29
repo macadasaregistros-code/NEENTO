@@ -131,3 +131,36 @@ export function compareJapaneseSpeech(
 
   return rawTranscript ? "miss" : "miss";
 }
+
+export function compareTextSpeech(
+  expectedText: string,
+  expectedReading: string | undefined,
+  rawTranscript: string,
+  displayTranscript: string,
+  alternatives: SpeechAlternative[] = [],
+): OralMatch {
+  const candidates = getRecognitionCandidates(rawTranscript, displayTranscript, alternatives);
+  const compactExpected = compactRecognitionText(expectedText);
+  const compactCandidates = candidates.map(compactRecognitionText);
+  const hasTextMatch = compactCandidates.some(
+    (candidate) =>
+      candidate === compactExpected ||
+      candidate.includes(compactExpected) ||
+      (candidate.length > 1 && compactExpected.includes(candidate)),
+  );
+
+  if (hasTextMatch) {
+    return "match";
+  }
+
+  const latinExpected = expectedReading ?? expectedText;
+  const latinCandidate = candidates.find(
+    (candidate) => normalizeSpokenText(candidate).length > 0,
+  );
+
+  if (latinCandidate) {
+    return compareRomajiSpeech(latinExpected, latinCandidate);
+  }
+
+  return rawTranscript ? "miss" : "miss";
+}

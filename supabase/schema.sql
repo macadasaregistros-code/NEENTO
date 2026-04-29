@@ -5,6 +5,13 @@ create table if not exists public.cards (
   user_id uuid references auth.users(id) on delete cascade,
   is_starter boolean not null default false,
   type text not null check (type in ('word', 'phrase')),
+  learning_mode text not null default 'ja_es' check (learning_mode in ('ja_es', 'ko_es')),
+  learning_language text not null default 'ja' check (learning_language in ('ja', 'es', 'ko')),
+  support_language text not null default 'es' check (support_language in ('ja', 'es', 'ko')),
+  learning_text text not null,
+  learning_reading text,
+  support_text text not null,
+  support_reading text,
   japanese_romaji text not null,
   japanese_kana text,
   spanish text not null,
@@ -22,6 +29,75 @@ alter table public.cards
 
 alter table public.cards
   add column if not exists japanese_kana text;
+
+alter table public.cards
+  add column if not exists learning_mode text;
+
+alter table public.cards
+  add column if not exists learning_language text;
+
+alter table public.cards
+  add column if not exists support_language text;
+
+alter table public.cards
+  add column if not exists learning_text text;
+
+alter table public.cards
+  add column if not exists learning_reading text;
+
+alter table public.cards
+  add column if not exists support_text text;
+
+alter table public.cards
+  add column if not exists support_reading text;
+
+update public.cards
+set
+  learning_mode = coalesce(learning_mode, 'ja_es'),
+  learning_language = coalesce(learning_language, 'ja'),
+  support_language = coalesce(support_language, 'es'),
+  learning_text = coalesce(learning_text, japanese_kana, japanese_romaji),
+  learning_reading = coalesce(learning_reading, japanese_romaji),
+  support_text = coalesce(support_text, spanish)
+where learning_mode is null
+  or learning_language is null
+  or support_language is null
+  or learning_text is null
+  or support_text is null;
+
+alter table public.cards
+  alter column learning_mode set default 'ja_es',
+  alter column learning_mode set not null,
+  alter column learning_language set default 'ja',
+  alter column learning_language set not null,
+  alter column support_language set default 'es',
+  alter column support_language set not null,
+  alter column learning_text set not null,
+  alter column support_text set not null;
+
+do $$
+begin
+  alter table public.cards
+    add constraint cards_learning_mode_check
+    check (learning_mode in ('ja_es', 'ko_es'));
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter table public.cards
+    add constraint cards_learning_language_check
+    check (learning_language in ('ja', 'es', 'ko'));
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter table public.cards
+    add constraint cards_support_language_check
+    check (support_language in ('ja', 'es', 'ko'));
+exception when duplicate_object then null;
+end $$;
 
 create table if not exists public.card_progress (
   id uuid primary key default gen_random_uuid(),
@@ -68,6 +144,9 @@ create index if not exists cards_user_id_idx
 
 create index if not exists cards_is_starter_idx
   on public.cards (is_starter);
+
+create index if not exists cards_learning_mode_idx
+  on public.cards (learning_mode);
 
 create index if not exists card_progress_visual_due_idx
   on public.card_progress (visual_due_at);

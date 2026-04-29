@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Neento",
     short_name: "Neento",
-    description: "Practica vocabulario japones en romaji con repeticion espaciada.",
+    description: "Practica vocabulario con repeticion espaciada en modo japones o coreano.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -4,17 +4,19 @@ import { BookOpen, Eye, Home, Mic } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { triggerHaptic } from "@/lib/haptics";
 
 const items = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/practice/visual", label: "Visual", icon: Eye },
-  { href: "/practice/oral", label: "Oral", icon: Mic },
-  { href: "/vocabulary", label: "Vocabulario", icon: BookOpen },
-];
+  { href: "/", labelKey: "home", icon: Home },
+  { href: "/practice/visual", labelKey: "visual", icon: Eye },
+  { href: "/practice/oral", labelKey: "oral", icon: Mic },
+  { href: "/vocabulary", labelKey: "vocabulary", icon: BookOpen },
+] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { config } = useLearningMode();
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -37,7 +39,7 @@ export function BottomNav() {
               onClick={() => triggerHaptic("light")}
             >
               <Icon aria-hidden="true" size={20} strokeWidth={2.2} />
-              <span>{item.label}</span>
+              <span>{config.copy.bottomNav[item.labelKey]}</span>
             </Link>
           );
         })}

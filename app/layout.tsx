@@ -7,7 +7,7 @@ import "@/app/globals.css";
 export const metadata: Metadata = {
   applicationName: "Neento",
   title: "Neento",
-  description: "Practica vocabulario japones en romaji con repeticion espaciada.",
+  description: "Practica vocabulario con repeticion espaciada en modo japones o coreano.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { mockCards, mockProgress } from "@/lib/mock-data";
 import {
   createInitialProgress,
@@ -78,8 +79,9 @@ function readStoredProgress(userId?: string): CardProgress[] {
 
 export function useStudyProgress() {
   const { isLoading: isAuthLoading, user } = useAuthSession();
+  const { config, mode } = useLearningMode();
   const userId = user?.id;
-  const [cards, setCards] = useState<VocabularyCard[]>(mockCards);
+  const [allCards, setAllCards] = useState<VocabularyCard[]>(mockCards);
   const [progressList, setProgressList] = useState<CardProgress[]>(() =>
     mergeProgressForCards(mockCards, mockProgress),
   );
@@ -95,13 +97,13 @@ export function useStudyProgress() {
     let isMounted = true;
     const storedProgress = readStoredProgress(userId);
 
-    setCards(mockCards);
+    setAllCards(mockCards);
     setProgressList(mergeProgressForCards(mockCards, mockProgress, storedProgress));
     setDataSource("mock");
     setIsHydrated(true);
 
     if (!userId) {
-      setSyncError("Inicia sesion para guardar progreso y crear palabras propias.");
+      setSyncError(config.copy.sync.loginForPersistence);
       return () => {
         isMounted = false;
       };
@@ -114,11 +116,11 @@ export function useStudyProgress() {
         }
 
         if (!studyData) {
-          setSyncError("Supabase no tiene tarjetas. Usando datos mock temporales.");
+          setSyncError(config.copy.sync.supabaseEmpty);
           return;
         }
 
-        setCards(studyData.cards);
+        setAllCards(studyData.cards);
         setProgressList(
           mergeProgressForCards(studyData.cards, studyData.progressList),
         );
@@ -130,16 +132,16 @@ export function useStudyProgress() {
           return;
         }
 
-        setCards(mockCards);
+        setAllCards(mockCards);
         setProgressList(mergeProgressForCards(mockCards, mockProgress, storedProgress));
         setDataSource("mock");
-        setSyncError("Supabase no respondio. Usando datos mock temporales.");
+        setSyncError(config.copy.sync.supabaseFailed);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [isAuthLoading, userId]);
+  }, [config.copy.sync, isAuthLoading, userId]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -160,11 +162,21 @@ export function useStudyProgress() {
     [progressByCardId],
   );
 
+  const cards = useMemo(
+    () => allCards.filter((card) => card.learningMode === mode),
+    [allCards, mode],
+  );
+
+  const visibleProgressList = useMemo(
+    () => progressList.filter((progress) => cards.some((card) => card.id === progress.cardId)),
+    [cards, progressList],
+  );
+
   const reviewCard = useCallback(
-    (cardId: string, mode: ReviewMode, result: ReviewResult) => {
+    (cardId: string, reviewMode: ReviewMode, result: ReviewResult) => {
       const currentProgress =
         progressByCardId.get(cardId) ?? createInitialProgress(cardId);
-      const updatedProgress = updateProgress(currentProgress, mode, result);
+      const updatedProgress = updateProgress(currentProgress, reviewMode, result);
 
       setProgressList((current) => {
         const hasProgress = current.some((progress) => progress.cardId === cardId);
@@ -181,55 +193,59 @@ export function useStudyProgress() {
       if (dataSource === "supabase" && userId) {
         void saveSupabaseProgress(updatedProgress, userId).catch(() => {
           setDataSource("mock");
-          setSyncError("No se pudo guardar en Supabase. Progreso guardado localmente.");
+          setSyncError(config.copy.sync.saveFailed);
         });
       }
     },
-    [dataSource, progressByCardId, userId],
+    [config.copy.sync.saveFailed, dataSource, progressByCardId, userId],
   );
 
   const resetProgress = useCallback(() => {
-    const resetList = cards.map((card) => createInitialProgress(card.id));
+    const resetList = cards.map((card) => createInitialProgress(card.id, userId));
 
-    setProgressList(resetList);
+    setProgressList((current) => {
+      const resetByCardId = new Map(resetList.map((progress) => [progress.cardId, progress]));
+
+      return current.map((progress) => resetByCardId.get(progress.cardId) ?? progress);
+    });
 
     if (dataSource === "supabase" && userId) {
       void Promise.all(resetList.map((progress) => saveSupabaseProgress(progress, userId))).catch(
         () => {
           setDataSource("mock");
-          setSyncError("No se pudo reiniciar en Supabase. Progreso reiniciado localmente.");
+          setSyncError(config.copy.sync.localFallback);
         },
       );
     }
-  }, [cards, dataSource, userId]);
+  }, [cards, config.copy.sync.localFallback, dataSource, userId]);
 
   const createCard = useCallback(
     async (input: NewVocabularyCardInput) => {
       if (!userId) {
-        throw new Error("Inicia sesion para crear palabras propias.");
+        throw new Error(config.copy.sync.loginForPersistence);
       }
 
       const createdCard = await createSupabaseCard(input, userId);
       const createdProgress = createInitialProgress(createdCard.id, userId);
 
-      setCards((currentCards) => [...currentCards, createdCard]);
+      setAllCards((currentCards) => [...currentCards, createdCard]);
       setProgressList((currentProgress) => [...currentProgress, createdProgress]);
       setDataSource("supabase");
       setSyncError(null);
 
       return createdCard;
     },
-    [userId],
+    [config.copy.sync.loginForPersistence, userId],
   );
 
   const visualDueCards = useMemo(
-    () => getDueCards(cards, progressList, "visual"),
-    [cards, progressList],
+    () => getDueCards(cards, visibleProgressList, "visual"),
+    [cards, visibleProgressList],
   );
 
   const oralDueCards = useMemo(
-    () => getDueCards(cards, progressList, "oral"),
-    [cards, progressList],
+    () => getDueCards(cards, visibleProgressList, "oral"),
+    [cards, visibleProgressList],
   );
 
   return {
@@ -239,7 +255,7 @@ export function useStudyProgress() {
     getProgress,
     isHydrated,
     oralDueCards,
-    progressList,
+    progressList: visibleProgressList,
     resetProgress,
     reviewCard,
     syncError,

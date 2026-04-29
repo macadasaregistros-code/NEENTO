@@ -7,24 +7,41 @@ import { FormEvent, useMemo, useState } from "react";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ProgressBadge } from "@/components/ProgressBadge";
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
+import { getSideContent } from "@/lib/learning";
 import { getCardStatus } from "@/lib/srs";
 import type { CardType, NewVocabularyCardInput } from "@/types/card";
 
+interface FormValues {
+  type: CardType;
+  learningText: string;
+  learningReading: string;
+  supportText: string;
+  supportReading: string;
+  category: string;
+}
+
+const initialFormValues: FormValues = {
+  type: "word",
+  learningText: "",
+  learningReading: "",
+  supportText: "",
+  supportReading: "",
+  category: "",
+};
+
 export default function VocabularyPage() {
   const { user } = useAuthSession();
+  const { config, mode } = useLearningMode();
+  const copy = config.copy;
   const { cards, createCard, getProgress } = useStudyProgress();
   const [query, setQuery] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
-  const [formValues, setFormValues] = useState<NewVocabularyCardInput>({
-    type: "word",
-    japaneseRomaji: "",
-    japaneseKana: "",
-    spanish: "",
-    category: "",
-  });
+  const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
+  const isJapaneseMode = mode === "ja_es";
 
   const filteredCards = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -34,11 +51,40 @@ export default function VocabularyPage() {
     }
 
     return cards.filter((card) =>
-      [card.japaneseRomaji, card.japaneseKana ?? "", card.spanish, card.category].some((value) =>
-        value.toLowerCase().includes(normalizedQuery),
-      ),
+      [
+        card.learningText,
+        card.learningReading ?? "",
+        card.supportText,
+        card.supportReading ?? "",
+        card.category,
+      ].some((value) => value.toLowerCase().includes(normalizedQuery)),
     );
   }, [cards, query]);
+
+  function buildCardInput(): NewVocabularyCardInput {
+    if (isJapaneseMode) {
+      const romaji = formValues.learningReading.trim();
+      const kana = formValues.learningText.trim();
+
+      return {
+        type: formValues.type,
+        learningMode: mode,
+        learningText: kana || romaji,
+        learningReading: romaji,
+        supportText: formValues.supportText.trim(),
+        category: formValues.category.trim(),
+      };
+    }
+
+    return {
+      type: formValues.type,
+      learningMode: mode,
+      learningText: formValues.learningText.trim(),
+      supportText: formValues.supportText.trim(),
+      supportReading: formValues.supportReading.trim() || undefined,
+      category: formValues.category.trim(),
+    };
+  }
 
   async function handleCreateCard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,28 +92,18 @@ export default function VocabularyPage() {
     setCreateMessage(null);
 
     try {
-      await createCard({
-        ...formValues,
-        japaneseKana: formValues.japaneseKana?.trim() || undefined,
-      });
-      setFormValues({
-        type: "word",
-        japaneseRomaji: "",
-        japaneseKana: "",
-        spanish: "",
-        category: "",
-      });
+      await createCard(buildCardInput());
+      setFormValues(initialFormValues);
       setIsCreating(false);
-      setCreateMessage("Tarjeta creada.");
+      setCreateMessage(copy.vocabulary.createMessage);
     } catch (error) {
-      setCreateError(error instanceof Error ? error.message : "No se pudo crear la tarjeta.");
+      setCreateError(
+        error instanceof Error ? error.message : copy.vocabulary.createError,
+      );
     }
   }
 
-  function updateFormValue<K extends keyof NewVocabularyCardInput>(
-    key: K,
-    value: NewVocabularyCardInput[K],
-  ) {
+  function updateFormValue<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setFormValues((current) => ({
       ...current,
       [key]: value,
@@ -86,20 +122,18 @@ export default function VocabularyPage() {
         </Link>
         <div className="text-right">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-            biblioteca
+            {copy.vocabulary.library}
           </p>
-          <h1 className="text-2xl font-black text-ink">Vocabulario</h1>
+          <h1 className="text-2xl font-black text-ink">{copy.vocabulary.title}</h1>
         </div>
       </header>
 
       <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-black text-ink">Mis palabras</p>
+            <p className="text-sm font-black text-ink">{copy.vocabulary.userCards}</p>
             <p className="mt-1 text-xs font-bold text-slate-500">
-              {user
-                ? "Crea tarjetas privadas ligadas a tu cuenta."
-                : "Inicia sesion para crear tarjetas privadas."}
+              {user ? copy.vocabulary.privateDescription : copy.vocabulary.loginDescription}
             </p>
           </div>
           {user ? (
@@ -109,14 +143,14 @@ export default function VocabularyPage() {
               type="button"
             >
               {isCreating ? <X aria-hidden="true" size={18} /> : <Plus aria-hidden="true" size={18} />}
-              {isCreating ? "Cerrar" : "Agregar"}
+              {isCreating ? copy.common.close : copy.common.add}
             </button>
           ) : (
             <Link
               className="rounded-lg bg-ink px-4 py-3 text-sm font-black text-white shadow-sm"
               href="/login"
             >
-              Login
+              {copy.common.login}
             </Link>
           )}
         </div>
@@ -137,7 +171,7 @@ export default function VocabularyPage() {
           <form className="mt-4 grid gap-3" onSubmit={handleCreateCard}>
             <label className="grid gap-2">
               <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Tipo
+                {copy.vocabulary.type}
               </span>
               <select
                 className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
@@ -146,57 +180,74 @@ export default function VocabularyPage() {
                 }
                 value={formValues.type}
               >
-                <option value="word">Palabra</option>
-                <option value="phrase">Frase</option>
+                <option value="word">{copy.common.word}</option>
+                <option value="phrase">{copy.common.phrase}</option>
               </select>
             </label>
 
+            {isJapaneseMode ? (
+              <label className="grid gap-2">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  {copy.vocabulary.formReadingLabel}
+                </span>
+                <input
+                  className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
+                  onChange={(event) => updateFormValue("learningReading", event.target.value)}
+                  placeholder={copy.vocabulary.formReadingPlaceholder}
+                  required
+                  value={formValues.learningReading}
+                />
+              </label>
+            ) : null}
+
             <label className="grid gap-2">
               <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Romaji
+                {copy.vocabulary.formPrimaryLabel}
               </span>
               <input
                 className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
-                onChange={(event) => updateFormValue("japaneseRomaji", event.target.value)}
-                placeholder="toire wa doko desu ka"
+                onChange={(event) => updateFormValue("learningText", event.target.value)}
+                placeholder={copy.vocabulary.formPrimaryPlaceholder}
+                required={!isJapaneseMode}
+                value={formValues.learningText}
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                {copy.vocabulary.formSupportLabel}
+              </span>
+              <input
+                className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
+                onChange={(event) => updateFormValue("supportText", event.target.value)}
+                placeholder={copy.vocabulary.formSupportPlaceholder}
                 required
-                value={formValues.japaneseRomaji}
+                value={formValues.supportText}
               />
             </label>
 
-            <label className="grid gap-2">
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Kana opcional
-              </span>
-              <input
-                className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
-                onChange={(event) => updateFormValue("japaneseKana", event.target.value)}
-                placeholder="かな"
-                value={formValues.japaneseKana}
-              />
-            </label>
+            {!isJapaneseMode ? (
+              <label className="grid gap-2">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  {copy.vocabulary.formReadingLabel}
+                </span>
+                <input
+                  className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
+                  onChange={(event) => updateFormValue("supportReading", event.target.value)}
+                  placeholder={copy.vocabulary.formReadingPlaceholder}
+                  value={formValues.supportReading}
+                />
+              </label>
+            ) : null}
 
             <label className="grid gap-2">
               <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Espanol
-              </span>
-              <input
-                className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
-                onChange={(event) => updateFormValue("spanish", event.target.value)}
-                placeholder="donde esta el bano?"
-                required
-                value={formValues.spanish}
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Categoria
+                {copy.common.category}
               </span>
               <input
                 className="h-12 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-ink outline-none focus:border-emerald-500 focus:bg-white"
                 onChange={(event) => updateFormValue("category", event.target.value)}
-                placeholder="preguntas comunes"
+                placeholder={copy.vocabulary.categoryPlaceholder}
                 required
                 value={formValues.category}
               />
@@ -206,7 +257,7 @@ export default function VocabularyPage() {
               className="h-14 rounded-lg bg-emerald-600 px-4 py-4 text-sm font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.98]"
               type="submit"
             >
-              Crear tarjeta
+              {copy.vocabulary.createCard}
             </button>
           </form>
         ) : null}
@@ -214,11 +265,11 @@ export default function VocabularyPage() {
 
       <label className="flex h-14 items-center gap-3 rounded-lg bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200">
         <Search aria-hidden="true" className="text-slate-400" size={19} />
-        <span className="sr-only">Buscar vocabulario</span>
+        <span className="sr-only">{copy.vocabulary.search}</span>
         <input
           className="w-full bg-transparent text-base font-semibold text-ink outline-none placeholder:text-slate-400"
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar palabra, frase o categoria"
+          placeholder={copy.vocabulary.searchPlaceholder}
           type="search"
           value={query}
         />
@@ -228,6 +279,8 @@ export default function VocabularyPage() {
         {filteredCards.map((card) => {
           const progress = getProgress(card);
           const status = getCardStatus(progress);
+          const learningContent = getSideContent(card, "learning");
+          const supportContent = getSideContent(card, "support");
 
           return (
             <article
@@ -236,16 +289,21 @@ export default function VocabularyPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
+                  {learningContent.reading ? (
+                    <p className="text-sm font-black leading-tight text-slate-400">
+                      {learningContent.reading}
+                    </p>
+                  ) : null}
                   <p className="text-xl font-black leading-tight text-ink">
-                    {card.japaneseRomaji}
+                    {learningContent.text}
                   </p>
-                  {card.japaneseKana ? (
-                    <p className="mt-1 text-lg font-black leading-tight text-slate-400">
-                      {card.japaneseKana}
+                  {supportContent.reading ? (
+                    <p className="mt-1 text-sm font-black leading-tight text-slate-400">
+                      {supportContent.reading}
                     </p>
                   ) : null}
                   <p className="mt-1 text-base font-semibold text-slate-600">
-                    {card.spanish}
+                    {supportContent.text}
                   </p>
                 </div>
                 <ProgressBadge status={status} />
@@ -256,10 +314,10 @@ export default function VocabularyPage() {
                   {card.category}
                 </span>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-                  {card.isStarter ? "starter" : "propia"}
+                  {card.isStarter ? copy.common.starter : copy.common.userOwned}
                 </span>
-                <LevelBadge label="Visual" level={progress.visualLevel} />
-                <LevelBadge label="Oral" level={progress.oralLevel} />
+                <LevelBadge label={copy.home.visual} level={progress.visualLevel} />
+                <LevelBadge label={copy.home.oral} level={progress.oralLevel} />
               </div>
             </article>
           );

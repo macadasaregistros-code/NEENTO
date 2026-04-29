@@ -7,13 +7,18 @@ import { useEffect, useState } from "react";
 import { DirectionToggle } from "@/components/DirectionToggle";
 import { EmptyState } from "@/components/EmptyState";
 import { SwipeCard } from "@/components/SwipeCard";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import type { PracticeDirection, ReviewResult } from "@/types/card";
 
 export default function VisualPracticePage() {
+  const { config, mode } = useLearningMode();
+  const copy = config.copy.practice;
   const { cards, getProgress, reviewCard, visualDueCards } = useStudyProgress();
   const [feedback, setFeedback] = useState<ReviewResult | null>(null);
-  const [direction, setDirection] = useState<PracticeDirection>("jp_to_es");
+  const [direction, setDirection] = useState<PracticeDirection>(
+    config.defaultVisualDirection,
+  );
   const [isFreePractice, setIsFreePractice] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
   const dueCurrent = visualDueCards[0];
@@ -27,8 +32,14 @@ export default function VisualPracticePage() {
       : undefined
     : dueCurrent;
   const pendingLabel = isFreePractice
-    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} libre`
-    : `${visualDueCards.length} pendientes`;
+    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} ${config.copy.common.free}`
+    : `${visualDueCards.length} ${copy.pending}`;
+
+  useEffect(() => {
+    setDirection(config.defaultVisualDirection);
+    setIsFreePractice(false);
+    setFreePracticeIndex(0);
+  }, [config.defaultVisualDirection, mode]);
 
   useEffect(() => {
     if (!feedback) {
@@ -71,7 +82,7 @@ export default function VisualPracticePage() {
         </Link>
         <div className="text-right">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-            practica visual
+            {copy.visualTitle}
           </p>
           <p className="text-sm font-bold text-slate-600">
             {pendingLabel}
@@ -90,12 +101,12 @@ export default function VisualPracticePage() {
           {feedback === "success" ? (
             <>
               <Check aria-hidden="true" size={20} />
-              {isFreePractice ? "Acierto libre" : "Acierto visual"}
+              {isFreePractice ? copy.freeSuccess : copy.visualSuccess}
             </>
           ) : (
             <>
               <X aria-hidden="true" size={20} />
-              {isFreePractice ? "Fallo libre" : "Fallo visual"}
+              {isFreePractice ? copy.freeFail : copy.visualFail}
             </>
           )}
         </div>
@@ -117,7 +128,7 @@ export default function VisualPracticePage() {
               onClick={startFreePractice}
               type="button"
             >
-              Seguir practicando
+              {copy.keepPracticing}
             </button>
           }
           action={
@@ -125,15 +136,15 @@ export default function VisualPracticePage() {
               className="rounded-lg bg-ink px-5 py-4 text-sm font-black text-white shadow-soft"
               href="/vocabulary"
             >
-              Ver vocabulario
+              {copy.seeVocabulary}
             </Link>
           }
           description={
             isFreePractice
-              ? "Terminaste una vuelta libre. Puedes repetir sin cambiar tus niveles."
-              : "No hay tarjetas visuales pendientes ahora. Puedes hacer practica libre sin cambiar tus niveles."
+              ? copy.completeFreeDescription
+              : copy.completeDescription
           }
-          title="Practica completa"
+          title={copy.completeTitle}
         />
       )}
     </div>

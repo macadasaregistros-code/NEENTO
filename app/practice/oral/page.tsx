@@ -7,13 +7,18 @@ import { useEffect, useState } from "react";
 import { DirectionToggle } from "@/components/DirectionToggle";
 import { EmptyState } from "@/components/EmptyState";
 import { OralPracticeCard } from "@/components/OralPracticeCard";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import type { PracticeDirection, ReviewResult } from "@/types/card";
 
 export default function OralPracticePage() {
+  const { config, mode } = useLearningMode();
+  const copy = config.copy.practice;
   const { cards, getProgress, oralDueCards, reviewCard } = useStudyProgress();
   const [feedback, setFeedback] = useState<ReviewResult | null>(null);
-  const [direction, setDirection] = useState<PracticeDirection>("es_to_jp");
+  const [direction, setDirection] = useState<PracticeDirection>(
+    config.defaultOralDirection,
+  );
   const [isFreePractice, setIsFreePractice] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
   const dueCurrent = oralDueCards[0];
@@ -27,8 +32,14 @@ export default function OralPracticePage() {
       : undefined
     : dueCurrent;
   const pendingLabel = isFreePractice
-    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} libre`
-    : `${oralDueCards.length} pendientes`;
+    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} ${config.copy.common.free}`
+    : `${oralDueCards.length} ${copy.pending}`;
+
+  useEffect(() => {
+    setDirection(config.defaultOralDirection);
+    setIsFreePractice(false);
+    setFreePracticeIndex(0);
+  }, [config.defaultOralDirection, mode]);
 
   useEffect(() => {
     if (!feedback) {
@@ -71,7 +82,7 @@ export default function OralPracticePage() {
         </Link>
         <div className="text-right">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-            practica oral
+            {copy.oralTitle}
           </p>
           <p className="text-sm font-bold text-slate-600">
             {pendingLabel}
@@ -90,12 +101,12 @@ export default function OralPracticePage() {
           {feedback === "success" ? (
             <>
               <Check aria-hidden="true" size={20} />
-              {isFreePractice ? "Acierto libre" : "Acierto oral"}
+              {isFreePractice ? copy.freeSuccess : copy.oralSuccess}
             </>
           ) : (
             <>
               <X aria-hidden="true" size={20} />
-              {isFreePractice ? "Fallo libre" : "Fallo oral"}
+              {isFreePractice ? copy.freeFail : copy.oralFail}
             </>
           )}
         </div>
@@ -117,7 +128,7 @@ export default function OralPracticePage() {
               onClick={startFreePractice}
               type="button"
             >
-              Seguir practicando
+              {copy.keepPracticing}
             </button>
           }
           action={
@@ -125,15 +136,15 @@ export default function OralPracticePage() {
               className="rounded-lg bg-ink px-5 py-4 text-sm font-black text-white shadow-soft"
               href="/vocabulary"
             >
-              Ver vocabulario
+              {copy.seeVocabulary}
             </Link>
           }
           description={
             isFreePractice
-              ? "Terminaste una vuelta libre. Puedes repetir sin cambiar tus niveles."
-              : "No hay tarjetas orales pendientes ahora. Puedes hacer practica libre sin cambiar tus niveles."
+              ? copy.completeFreeDescription
+              : copy.completeDescription
           }
-          title="Practica completa"
+          title={copy.completeTitle}
         />
       )}
     </div>

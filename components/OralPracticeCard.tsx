@@ -3,11 +3,13 @@
 import { Mic, MicOff, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { JapanesePrompt } from "@/components/JapanesePrompt";
+import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
+import { useLearningMode } from "@/hooks/useLearningMode";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { triggerHaptic } from "@/lib/haptics";
-import { compareJapaneseSpeech, compareRomajiSpeech } from "@/lib/oral";
+import { getAnswerSide, getFirstSide, getSideContent, getSpeechLanguage } from "@/lib/learning";
+import { compareJapaneseSpeech, compareTextSpeech } from "@/lib/oral";
 import { getExpectedSpeech, speakText } from "@/lib/speech";
 import type {
   CardProgress,
@@ -25,13 +27,6 @@ interface OralPracticeCardProps {
 
 type OralStatus = "idle" | "retry" | "success" | "fail";
 
-const statusCopy: Record<OralStatus, string> = {
-  idle: "Di la respuesta. La app validara automaticamente.",
-  retry: "No coincidio. Intenta una vez mas.",
-  success: "Correcto. Avanzando.",
-  fail: "Respuesta revelada. Avanzando.",
-};
-
 const statusStyles: Record<OralStatus, string> = {
   idle: "bg-slate-100 text-slate-500 ring-slate-200",
   retry: "bg-amber-100 text-amber-800 ring-amber-200",
@@ -45,6 +40,8 @@ export function OralPracticeCard({
   progress,
   onReview,
 }: OralPracticeCardProps) {
+  const { config } = useLearningMode();
+  const copy = config.copy;
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -63,28 +60,40 @@ export function OralPracticeCard({
     stopListening,
     transcript,
   } = useSpeechRecognition();
-  const isJapaneseAnswer = direction === "es_to_jp";
-  const recognitionLanguage = isJapaneseAnswer ? "ja-JP" : "es-ES";
+  const promptContent = getSideContent(card, getFirstSide(direction));
+  const answerContent = getSideContent(card, getAnswerSide(direction));
+  const recognitionLanguage = getSpeechLanguage(answerContent.language);
   const hasSpeechResult = Boolean(rawTranscript || transcript);
+  const statusCopy: Record<OralStatus, string> = {
+    fail: copy.speech.answerRevealed,
+    idle: copy.speech.idle,
+    retry: copy.speech.retry,
+    success: copy.speech.correct,
+  };
 
   const match = useMemo(() => {
-    if (isJapaneseAnswer) {
+    if (answerContent.language === "ja") {
       return compareJapaneseSpeech(
-        card.japaneseRomaji,
-        card.japaneseKana,
+        answerContent.reading ?? answerContent.text,
+        answerContent.text,
         rawTranscript,
         transcript,
         alternatives,
       );
     }
 
-    return compareRomajiSpeech(card.spanish, transcript || rawTranscript);
+    return compareTextSpeech(
+      answerContent.text,
+      answerContent.reading,
+      rawTranscript,
+      transcript,
+      alternatives,
+    );
   }, [
     alternatives,
-    card.japaneseKana,
-    card.japaneseRomaji,
-    card.spanish,
-    isJapaneseAnswer,
+    answerContent.language,
+    answerContent.reading,
+    answerContent.text,
     rawTranscript,
     transcript,
   ]);
@@ -147,7 +156,7 @@ export function OralPracticeCard({
     const didSpeak = speakText(expectedSpeech.text, expectedSpeech.lang);
 
     triggerHaptic("light");
-    setSpeechMessage(didSpeak ? "Reproduciendo respuesta." : "Voz no disponible.");
+    setSpeechMessage(didSpeak ? copy.speech.listen : copy.speech.voiceUnavailable);
   }
 
   return (
@@ -159,7 +168,7 @@ export function OralPracticeCard({
               {card.category}
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              {card.type === "word" ? "palabra" : "frase"}
+              {card.type === "word" ? copy.common.word : copy.common.phrase}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -170,13 +179,7 @@ export function OralPracticeCard({
 
         <div className="space-y-5">
           <div className="flex min-h-44 items-center justify-center rounded-lg bg-mist p-5 text-center">
-            {isJapaneseAnswer ? (
-              <h1 className="text-balance text-5xl font-black leading-[1.05] tracking-normal text-ink">
-                {card.spanish}
-              </h1>
-            ) : (
-              <JapanesePrompt card={card} />
-            )}
+            <LanguagePrompt content={promptContent} />
           </div>
 
           <div className="space-y-3">
@@ -196,17 +199,17 @@ export function OralPracticeCard({
                 {isListening ? (
                   <>
                     <Square aria-hidden="true" size={18} />
-                    Detener
+                    {copy.speech.stop}
                   </>
                 ) : (
                   <>
                     <Mic aria-hidden="true" size={19} />
-                    Grabar
+                    {copy.speech.speak}
                   </>
                 )}
               </button>
               <button
-                aria-label="Escuchar respuesta"
+                aria-label={copy.speech.listen}
                 className="flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
                 onClick={handleSpeak}
                 type="button"
@@ -214,7 +217,7 @@ export function OralPracticeCard({
                 <Volume2 aria-hidden="true" size={20} />
               </button>
               <button
-                aria-label="Limpiar intento"
+                aria-label={copy.speech.clearAttempt}
                 className="flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
                 disabled={isLocked}
                 onClick={() => {
@@ -230,18 +233,20 @@ export function OralPracticeCard({
             {!isSupported ? (
               <div className="flex items-center gap-2 rounded-lg bg-amber-100 px-4 py-3 text-sm font-bold text-amber-800 ring-1 ring-amber-200">
                 <MicOff aria-hidden="true" size={18} />
-                Microfono no disponible en este navegador.
+                {copy.speech.micUnavailable}
               </div>
             ) : null}
 
             {error ? (
               <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-100">
-                {error}
+                {error
+                  .replace("El navegador no soporta reconocimiento de voz.", copy.speech.unsupported)
+                  .replace("No se pudo escuchar", copy.speech.listeningError)}
               </p>
             ) : null}
 
             <div className={`rounded-lg px-4 py-3 text-sm font-bold ring-1 ${statusStyles[status]}`}>
-              {statusCopy[status]} Intentos: {failedAttempts}/2
+              {statusCopy[status]} {copy.speech.attempts}: {failedAttempts}/2
             </div>
 
             {speechMessage ? (
@@ -253,14 +258,14 @@ export function OralPracticeCard({
             {hasSpeechResult ? (
               <div className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                  Validacion automatica
+                  {copy.speech.autoValidation}
                 </p>
                 <p className="mt-2 text-xl font-black text-ink">
-                  {transcript || "Audio recibido"}
+                  {transcript || rawTranscript || copy.speech.receivedAudio}
                 </p>
                 {confidence > 0 ? (
                   <p className="mt-2 text-xs font-bold text-slate-400">
-                    Confianza: {Math.round(confidence * 100)}%
+                    {copy.speech.confidence}: {Math.round(confidence * 100)}%
                   </p>
                 ) : null}
               </div>
@@ -270,16 +275,10 @@ export function OralPracticeCard({
           {isRevealed ? (
             <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-                Respuesta
+                {copy.practice.answer}
               </p>
               <div className="mt-3">
-                {isJapaneseAnswer ? (
-                  <JapanesePrompt card={card} tone="muted" />
-                ) : (
-                  <p className="text-2xl font-black text-emerald-950">
-                    {card.spanish}
-                  </p>
-                )}
+                <LanguagePrompt content={answerContent} tone="muted" />
               </div>
             </div>
           ) : null}

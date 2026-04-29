@@ -1,16 +1,12 @@
 import type { PracticeDirection, VocabularyCard } from "@/types/card";
+import { getAnswerSide, getSideContent, getSpeechLanguage } from "@/lib/learning";
 
 export function getExpectedSpeech(card: VocabularyCard, direction: PracticeDirection) {
-  if (direction === "es_to_jp") {
-    return {
-      lang: "ja-JP",
-      text: card.japaneseKana ?? card.japaneseRomaji,
-    };
-  }
+  const answer = getSideContent(card, getAnswerSide(direction));
 
   return {
-    lang: "es-ES",
-    text: card.spanish,
+    lang: getSpeechLanguage(answer.language),
+    text: answer.text,
   };
 }
 
