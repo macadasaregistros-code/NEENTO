@@ -20,10 +20,11 @@ export function LearningModeSelector() {
       <div className="grid grid-cols-2 gap-1">
         {modes.map((item) => {
           const isActive = item === mode;
+          const itemConfig = modeConfigs[item];
 
           return (
             <button
-              className={`h-10 rounded-lg px-2 text-xs font-black transition ${
+              className={`min-h-12 rounded-lg px-2 py-2 text-xs font-black leading-tight transition ${
                 isActive
                   ? "bg-ink text-white"
                   : "text-slate-500 hover:bg-slate-100"
@@ -32,7 +33,10 @@ export function LearningModeSelector() {
               onClick={() => setMode(item)}
               type="button"
             >
-              {modeConfigs[item].shortLabel}
+              <span className="block text-[0.65rem] uppercase tracking-[0.12em] opacity-70">
+                {itemConfig.shortLabel}
+              </span>
+              <span>{itemConfig.label}</span>
             </button>
           );
         })}

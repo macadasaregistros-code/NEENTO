@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowLeft, LockKeyhole, Mail } from "lucide-react";
-import Link from "next/link";
+import { LockKeyhole, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
@@ -11,6 +11,7 @@ type AuthMode = "sign_in" | "sign_up";
 
 export default function LoginPage() {
   const { config } = useLearningMode();
+  const router = useRouter();
   const copy = config.copy.auth;
   const [authMode, setAuthMode] = useState<AuthMode>("sign_in");
   const [email, setEmail] = useState("");
@@ -52,25 +53,24 @@ export default function LoginPage() {
     }
 
     setMessage(isSignUp ? copy.accountCreated : copy.sessionStarted);
+    router.replace("/");
   }
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <header className="flex items-center justify-between pt-2">
-        <Link
-          aria-label="Volver a Home"
-          className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-ink shadow-sm ring-1 ring-slate-200"
-          href="/"
-        >
-          <ArrowLeft aria-hidden="true" size={21} />
-        </Link>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+            Neento
+          </p>
+          <h1 className="mt-1 text-4xl font-black leading-none text-ink">
+            {copy.login}
+          </h1>
+        </div>
         <div className="text-right">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-            {copy.login}
+            {isSignUp ? copy.createAccount : copy.enter}
           </p>
-          <h1 className="text-2xl font-black text-ink">
-            {isSignUp ? copy.createAccount : copy.login}
-          </h1>
         </div>
       </header>
 
