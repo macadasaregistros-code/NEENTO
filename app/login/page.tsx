@@ -30,6 +30,9 @@ export default function LoginPage() {
       ? await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
         })
       : await supabase.auth.signInWithPassword({
           email,
@@ -44,7 +47,7 @@ export default function LoginPage() {
     }
 
     if (isSignUp && !authResponse.data.session) {
-      setMessage(copy.needsEmailConfig);
+      setMessage(copy.checkConfirmationEmail);
       return;
     }
 

@@ -30,7 +30,7 @@ interface ModeCopy {
     sessionStarted: string;
     switchToLogin: string;
     switchToSignup: string;
-    needsEmailConfig: string;
+    checkConfirmationEmail: string;
   };
   bottomNav: {
     home: string;
@@ -171,8 +171,8 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         sessionStarted: "Sesion iniciada.",
         switchToLogin: "Ya tengo cuenta",
         switchToSignup: "Crear cuenta nueva",
-        needsEmailConfig:
-          "Cuenta creada, pero Supabase todavia exige confirmar email. Desactiva email confirmation para entrar directo.",
+        checkConfirmationEmail:
+          "Cuenta creada. Revisa tu correo y confirma tu email para poder entrar.",
       },
       bottomNav: {
         home: "Home",
@@ -314,8 +314,8 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         sessionStarted: "로그인되었습니다.",
         switchToLogin: "이미 계정이 있어요",
         switchToSignup: "새 계정 만들기",
-        needsEmailConfig:
-          "계정은 만들어졌지만 Supabase에서 이메일 확인을 요구합니다. 바로 로그인하려면 email confirmation을 꺼야 합니다.",
+        checkConfirmationEmail:
+          "계정이 만들어졌습니다. 이메일을 확인하고 인증한 뒤 로그인하세요.",
       },
       bottomNav: {
         home: "홈",
