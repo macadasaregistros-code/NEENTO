@@ -1,15 +1,15 @@
 "use client";
 
-import { BarChart3, BookOpen, Eye, RotateCcw } from "lucide-react";
+import { BarChart3, BookOpen, Eye, Mic, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
 import { useStudyProgress } from "@/hooks/useStudyProgress";
-import { getCardStatus } from "@/lib/srs";
 
 export default function HomePage() {
   const {
     cards,
     dataSource,
+    oralDueCards,
     progressList,
     resetProgress,
     syncError,
@@ -22,9 +22,6 @@ export default function HomePage() {
         progress.oralSuccessCount +
         progress.oralFailCount >
       0,
-  ).length;
-  const difficultCount = progressList.filter(
-    (progress) => getCardStatus(progress) === "difficult",
   ).length;
 
   return (
@@ -56,19 +53,29 @@ export default function HomePage() {
         <div className="mt-2 flex items-end justify-between gap-4">
           <div>
             <p className="text-6xl font-black leading-none text-ink">
-              {visualDueCards.length}
+              {visualDueCards.length + oralDueCards.length}
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-500">
-              tarjetas visuales listas
+              repasos listos
             </p>
           </div>
-          <div className="rounded-lg bg-emerald-50 px-4 py-3 text-right">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
-              avance
-            </p>
-            <p className="mt-1 text-lg font-black text-emerald-950">
-              {reviewedCount}/{cards.length}
-            </p>
+          <div className="grid gap-2 text-right">
+            <div className="rounded-lg bg-emerald-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                visual
+              </p>
+              <p className="mt-1 text-lg font-black text-emerald-950">
+                {visualDueCards.length}
+              </p>
+            </div>
+            <div className="rounded-lg bg-sky-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">
+                oral
+              </p>
+              <p className="mt-1 text-lg font-black text-sky-950">
+                {oralDueCards.length}
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -79,8 +86,8 @@ export default function HomePage() {
           <p className="mt-1 text-sm font-semibold text-slate-500">tarjetas</p>
         </div>
         <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
-          <p className="text-3xl font-black text-ink">{difficultCount}</p>
-          <p className="mt-1 text-sm font-semibold text-slate-500">dificiles</p>
+          <p className="text-3xl font-black text-ink">{reviewedCount}/{cards.length}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">con avance</p>
         </div>
       </section>
 
@@ -94,6 +101,17 @@ export default function HomePage() {
             Modo visual
           </span>
           <span>{visualDueCards.length}</span>
+        </Link>
+
+        <Link
+          className="flex h-16 items-center justify-between rounded-lg bg-emerald-600 px-5 text-base font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.99]"
+          href="/practice/oral"
+        >
+          <span className="flex items-center gap-3">
+            <Mic aria-hidden="true" size={22} />
+            Modo oral
+          </span>
+          <span>{oralDueCards.length}</span>
         </Link>
 
         <Link
