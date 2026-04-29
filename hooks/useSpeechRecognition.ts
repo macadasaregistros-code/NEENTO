@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { sanitizeRomajiTranscript } from "@/lib/oral";
+import { sanitizeRomajiTranscript, type SpeechAlternative } from "@/lib/oral";
 
 interface BrowserSpeechRecognitionEvent {
   results: SpeechRecognitionResultList;
@@ -48,7 +48,11 @@ export function useSpeechRecognition() {
   const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [rawTranscript, setRawTranscript] = useState("");
+  const [alternatives, setAlternatives] = useState<SpeechAlternative[]>([]);
+  const [confidence, setConfidence] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isFinal, setIsFinal] = useState(false);
 
   useEffect(() => {
     setIsSupported(Boolean(getSpeechRecognitionConstructor()));
@@ -76,10 +80,10 @@ export function useSpeechRecognition() {
 
     const recognition = new SpeechRecognitionConstructor();
 
-    recognition.lang = "en-US";
+    recognition.lang = "ja-JP";
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;
     recognition.onstart = () => {
       setError(null);
       setIsListening(true);
@@ -92,28 +96,51 @@ export function useSpeechRecognition() {
       setIsListening(false);
     };
     recognition.onresult = (event) => {
+      const latestResult = event.results[event.results.length - 1];
+      const nextAlternatives = latestResult
+        ? Array.from(latestResult).map((alternative) => ({
+            confidence: alternative.confidence,
+            transcript: alternative.transcript,
+          }))
+        : [];
       const nextTranscript = Array.from(event.results)
         .map((result) => result[0]?.transcript ?? "")
         .join(" ")
         .trim();
 
+      setRawTranscript(nextTranscript);
       setTranscript(sanitizeRomajiTranscript(nextTranscript));
+      setAlternatives(nextAlternatives);
+      setConfidence(nextAlternatives[0]?.confidence ?? 0);
+      setIsFinal(Boolean(latestResult?.isFinal));
     };
 
     recognitionRef.current = recognition;
     setTranscript("");
+    setRawTranscript("");
+    setAlternatives([]);
+    setConfidence(0);
+    setIsFinal(false);
     recognition.start();
   }, []);
 
   const resetTranscript = useCallback(() => {
     setTranscript("");
+    setRawTranscript("");
+    setAlternatives([]);
+    setConfidence(0);
     setError(null);
+    setIsFinal(false);
   }, []);
 
   return {
+    alternatives,
+    confidence,
     error,
+    isFinal,
     isListening,
     isSupported,
+    rawTranscript,
     resetTranscript,
     startListening,
     stopListening,

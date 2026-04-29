@@ -1,11 +1,11 @@
 "use client";
 
 import { ArrowUp, Check, Mic, MicOff, RotateCcw, Square, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LevelBadge } from "@/components/LevelBadge";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import { compareRomajiSpeech } from "@/lib/oral";
+import { compareJapaneseSpeech } from "@/lib/oral";
 import type { CardProgress, ReviewResult, VocabularyCard } from "@/types/card";
 
 interface OralPracticeCardProps {
@@ -15,24 +15,28 @@ interface OralPracticeCardProps {
 }
 
 const matchLabels = {
-  match: "Coincide con la respuesta",
-  partial: "Coincidencia parcial",
-  miss: "Revisa con la respuesta",
+  match: "Correcto. Avanzando",
+  partial: "No coincide lo suficiente",
+  miss: "No coincide con la respuesta",
 };
 
 const matchStyles = {
   match: "bg-green-100 text-green-800 ring-green-200",
   partial: "bg-amber-100 text-amber-800 ring-amber-200",
-  miss: "bg-slate-100 text-slate-600 ring-slate-200",
+  miss: "bg-red-100 text-red-800 ring-red-200",
 };
 
 export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const {
+    alternatives,
+    confidence,
     error,
+    isFinal,
     isListening,
     isSupported,
+    rawTranscript,
     resetTranscript,
     startListening,
     stopListening,
@@ -40,19 +44,45 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
   } = useSpeechRecognition();
 
   const match = useMemo(
-    () => compareRomajiSpeech(card.japaneseRomaji, transcript),
-    [card.japaneseRomaji, transcript],
+    () =>
+      compareJapaneseSpeech(
+        card.japaneseRomaji,
+        rawTranscript,
+        transcript,
+        alternatives,
+      ),
+    [alternatives, card.japaneseRomaji, rawTranscript, transcript],
+  );
+  const hasSpeechResult = Boolean(rawTranscript || transcript);
+
+  const review = useCallback(
+    (result: ReviewResult) => {
+      if (isLocked) {
+        return;
+      }
+
+      setIsLocked(true);
+      stopListening();
+      onReview(result);
+    },
+    [isLocked, onReview, stopListening],
   );
 
-  function review(result: ReviewResult) {
-    if (isLocked) {
+  useEffect(() => {
+    if (!isFinal || !hasSpeechResult || isLocked) {
       return;
     }
 
-    setIsLocked(true);
-    stopListening();
-    onReview(result);
-  }
+    const result: ReviewResult = match === "match" ? "success" : "fail";
+
+    if (result === "fail") {
+      setIsRevealed(true);
+    }
+
+    const timeout = window.setTimeout(() => review(result), 950);
+
+    return () => window.clearTimeout(timeout);
+  }, [hasSpeechResult, isFinal, isLocked, match, review]);
 
   return (
     <div className="flex flex-1 flex-col justify-center gap-4">
@@ -75,7 +105,7 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
         <div className="space-y-5">
           <div className="rounded-lg bg-mist p-5">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-              Produce en romaji
+              Produce en japones
             </p>
             <h1 className="mt-3 text-balance text-4xl font-black leading-tight tracking-normal text-ink">
               {card.spanish}
@@ -102,7 +132,7 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
                 ) : (
                   <>
                     <Mic aria-hidden="true" size={19} />
-                    Grabar voz
+                    Grabar en japones
                   </>
                 )}
               </button>
@@ -129,21 +159,28 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
               </p>
             ) : null}
 
-            {transcript ? (
+            {hasSpeechResult ? (
               <div className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                  Escuchado
+                  Validacion automatica
                 </p>
-                <p className="mt-2 text-xl font-black text-ink">{transcript}</p>
+                <p className="mt-2 text-xl font-black text-ink">
+                  {transcript || "Audio recibido"}
+                </p>
                 <span
                   className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${matchStyles[match]}`}
                 >
                   {matchLabels[match]}
                 </span>
+                {confidence > 0 ? (
+                  <p className="mt-2 text-xs font-bold text-slate-400">
+                    Confianza: {Math.round(confidence * 100)}%
+                  </p>
+                ) : null}
               </div>
             ) : (
               <p className="rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500">
-                Di la respuesta en voz alta antes de revelarla.
+                Di la respuesta en voz alta. Se validara automaticamente.
               </p>
             )}
           </div>
