@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { LevelBadge } from "@/components/LevelBadge";
+import { triggerHaptic } from "@/lib/haptics";
 import type { CardProgress, ReviewResult, VocabularyCard } from "@/types/card";
 
 interface SwipeCardProps {
@@ -24,6 +25,7 @@ export function SwipeCard({ card, progress, onReview }: SwipeCardProps) {
     }
 
     setIsLocked(true);
+    triggerHaptic(result === "success" ? "success" : "warning");
     onReview(result);
   }
 
@@ -35,6 +37,7 @@ export function SwipeCard({ card, progress, onReview }: SwipeCardProps) {
     const isLeftFail = x < -90 && Math.abs(x) > Math.abs(y);
 
     if (isVerticalReveal) {
+      triggerHaptic("light");
       setIsRevealed(true);
       return;
     }

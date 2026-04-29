@@ -8,8 +8,8 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#eef7f1_0,_#f5f7fb_38%,_#edf1f7_100%)] text-ink">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-5">
+    <main className="min-h-dvh bg-[radial-gradient(circle_at_top,_#eef7f1_0,_#f5f7fb_38%,_#edf1f7_100%)] text-ink">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
         {children}
       </div>
       <BottomNav />

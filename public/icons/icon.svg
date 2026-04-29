@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Neento">
+  <rect width="512" height="512" rx="96" fill="#182033"/>
+  <path d="M126 156c0-21 17-38 38-38h184c21 0 38 17 38 38v200c0 21-17 38-38 38H164c-21 0-38-17-38-38V156Z" fill="#f5f7fb"/>
+  <path d="M166 205c0-16 13-29 29-29h122c16 0 29 13 29 29v24c0 16-13 29-29 29H195c-16 0-29-13-29-29v-24Z" fill="#16a34a"/>
+  <path d="M172 314h168" stroke="#182033" stroke-width="34" stroke-linecap="round"/>
+  <path d="M172 360h104" stroke="#182033" stroke-width="34" stroke-linecap="round"/>
+</svg>

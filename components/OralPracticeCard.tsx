@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LevelBadge } from "@/components/LevelBadge";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { triggerHaptic } from "@/lib/haptics";
 import { compareJapaneseSpeech } from "@/lib/oral";
 import type { CardProgress, ReviewResult, VocabularyCard } from "@/types/card";
 
@@ -62,6 +63,7 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
       }
 
       setIsLocked(true);
+      triggerHaptic(result === "success" ? "success" : "warning");
       stopListening();
       onReview(result);
     },
@@ -197,7 +199,10 @@ export function OralPracticeCard({ card, progress, onReview }: OralPracticeCardP
           ) : (
             <button
               className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-black text-white shadow-lg shadow-slate-200 transition active:scale-[0.98]"
-              onClick={() => setIsRevealed(true)}
+              onClick={() => {
+                triggerHaptic("light");
+                setIsRevealed(true);
+              }}
               type="button"
             >
               <ArrowUp aria-hidden="true" size={18} />

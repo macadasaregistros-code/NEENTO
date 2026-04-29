@@ -4,6 +4,7 @@
 
 :root {
   color-scheme: light;
+  background: #f5f7fb;
 }
 
 * {
@@ -11,16 +12,47 @@
 }
 
 html {
+  height: 100%;
   min-height: 100%;
+  background: #f5f7fb;
+  overscroll-behavior: none;
 }
 
 body {
+  height: 100%;
   min-height: 100%;
   margin: 0;
   background: #f5f7fb;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body,
+button,
+input {
+  font: inherit;
 }
 
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input {
+  touch-action: manipulation;
+}
+
+button {
+  user-select: none;
+}
+
+input {
+  font-size: 16px;
+}
+
+::selection {
+  background: rgba(22, 163, 74, 0.18);
 }

@@ -5,13 +5,28 @@ import { AppShell } from "@/components/AppShell";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
+  applicationName: "Neento",
   title: "Neento",
   description: "Practica vocabulario japones en romaji con repeticion espaciada.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Neento",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
   initialScale: 1,
-  themeColor: "#f5f7fb",
+  themeColor: "#182033",
+  viewportFit: "cover",
   width: "device-width",
 };
 
