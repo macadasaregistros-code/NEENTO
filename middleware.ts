@@ -1,13 +1,6 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { supabaseAnonKey, supabaseUrl } from "@/src/lib/supabase/config";
-
-type CookieToSet = {
-  name: string;
-  value: string;
-  options: CookieOptions;
-};
+import { createClient } from "@/utils/supabase/middleware";
 
 function isPublicRoute(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/auth");
@@ -18,34 +11,11 @@ function getRedirectPath(request: NextRequest): string {
 }
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request,
-  });
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet: CookieToSet[]) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-
-        response = NextResponse.next({
-          request,
-        });
-
-        cookiesToSet.forEach(({ name, options, value }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
+  const supabaseMiddleware = createClient(request);
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabaseMiddleware.supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
   if (!user && !isPublicRoute(pathname)) {
@@ -66,7 +36,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl);
   }
 
-  return response;
+  return supabaseMiddleware.response;
 }
 
 export const config = {
