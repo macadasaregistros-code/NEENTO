@@ -1,7 +1,7 @@
 "use client";
 
 import { Mic, MicOff, RotateCcw, Square, Volume2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
@@ -42,6 +42,7 @@ export function OralPracticeCard({
 }: OralPracticeCardProps) {
   const { config } = useLearningMode();
   const copy = config.copy;
+  const reviewTimeoutRef = useRef<number | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
@@ -71,6 +72,20 @@ export function OralPracticeCard({
     success: copy.speech.correct,
   };
 
+  const scheduleReview = useCallback(
+    (result: ReviewResult, delay: number) => {
+      if (reviewTimeoutRef.current) {
+        window.clearTimeout(reviewTimeoutRef.current);
+      }
+
+      reviewTimeoutRef.current = window.setTimeout(() => {
+        reviewTimeoutRef.current = null;
+        onReview(result);
+      }, delay);
+    },
+    [onReview],
+  );
+
   const match = useMemo(() => {
     if (answerContent.language === "ja") {
       return compareJapaneseSpeech(
@@ -99,6 +114,11 @@ export function OralPracticeCard({
   ]);
 
   useEffect(() => {
+    if (reviewTimeoutRef.current) {
+      window.clearTimeout(reviewTimeoutRef.current);
+      reviewTimeoutRef.current = null;
+    }
+
     setFailedAttempts(0);
     setIsLocked(false);
     setIsRevealed(false);
@@ -107,6 +127,15 @@ export function OralPracticeCard({
     resetTranscript();
     stopListening();
   }, [card.id, direction, resetTranscript, stopListening]);
+
+  useEffect(
+    () => () => {
+      if (reviewTimeoutRef.current) {
+        window.clearTimeout(reviewTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isFinal || !hasSpeechResult || isLocked) {
@@ -118,9 +147,8 @@ export function OralPracticeCard({
       setIsLocked(true);
       stopListening();
       triggerHaptic("success");
-
-      const timeout = window.setTimeout(() => onReview("success"), 850);
-      return () => window.clearTimeout(timeout);
+      scheduleReview("success", 650);
+      return;
     }
 
     const nextFailedAttempts = failedAttempts + 1;
@@ -133,9 +161,8 @@ export function OralPracticeCard({
       setIsRevealed(true);
       setIsLocked(true);
       stopListening();
-
-      const timeout = window.setTimeout(() => onReview("fail"), 1600);
-      return () => window.clearTimeout(timeout);
+      scheduleReview("fail", 1200);
+      return;
     }
 
     setStatus("retry");
@@ -148,6 +175,7 @@ export function OralPracticeCard({
     match,
     onReview,
     resetTranscript,
+    scheduleReview,
     stopListening,
   ]);
 

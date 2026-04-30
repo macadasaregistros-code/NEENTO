@@ -1,14 +1,21 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUp, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { triggerHaptic } from "@/lib/haptics";
-import { getAnswerSide, getFirstSide, getSideContent } from "@/lib/learning";
+import {
+  getAnswerSide,
+  getFirstSide,
+  getSideContent,
+  getSpeechLanguage,
+  type SideContent,
+} from "@/lib/learning";
+import { speakText } from "@/lib/speech";
 import type {
   CardProgress,
   PracticeDirection,
@@ -64,6 +71,30 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
     }
   }
 
+  function handleSpeak(content: SideContent) {
+    triggerHaptic("light");
+    speakText(content.reading ?? content.text, getSpeechLanguage(content.language));
+  }
+
+  function renderListenButton(content: SideContent) {
+    if (content.language !== "ja") {
+      return null;
+    }
+
+    return (
+      <button
+        aria-label={copy.speech.listen}
+        className="mx-auto flex h-12 items-center justify-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-black text-white shadow-soft transition active:scale-[0.98]"
+        onClick={() => handleSpeak(content)}
+        onPointerDown={(event) => event.stopPropagation()}
+        type="button"
+      >
+        <Volume2 aria-hidden="true" size={18} />
+        {copy.speech.listen}
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col justify-center gap-4">
       <motion.article
@@ -110,6 +141,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
 
         <div className="min-h-48 space-y-5">
           <LanguagePrompt content={firstContent} />
+          {renderListenButton(firstContent)}
 
           {isRevealed ? (
             <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
@@ -119,6 +151,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
               <div className="mt-3">
                 <LanguagePrompt content={answerContent} tone="muted" />
               </div>
+              <div className="mt-4">{renderListenButton(answerContent)}</div>
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500">

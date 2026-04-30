@@ -303,7 +303,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
   ko_es: {
     appLanguage: "ko",
     defaultOralDirection: "support_to_learning",
-    defaultVisualDirection: "learning_to_support",
+    defaultVisualDirection: "support_to_learning",
     label: "한국어로 스페인어 배우기",
     shortLabel: "KO / ES",
     learningLanguage: "es",

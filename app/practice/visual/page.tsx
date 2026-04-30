@@ -21,7 +21,12 @@ export default function VisualPracticePage() {
   );
   const [isFreePractice, setIsFreePractice] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
-  const dueCurrent = visualDueCards[0];
+  const [reviewedSessionCardIds, setReviewedSessionCardIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const dueCurrent = visualDueCards.find(
+    ({ card }) => !reviewedSessionCardIds.has(card.id),
+  );
   const freeCurrentCard = cards[freePracticeIndex];
   const current = isFreePractice
     ? freeCurrentCard
@@ -39,6 +44,7 @@ export default function VisualPracticePage() {
     setDirection(config.defaultVisualDirection);
     setIsFreePractice(false);
     setFreePracticeIndex(0);
+    setReviewedSessionCardIds(new Set());
   }, [config.defaultVisualDirection, mode]);
 
   useEffect(() => {
@@ -58,6 +64,11 @@ export default function VisualPracticePage() {
     if (isFreePractice) {
       setFreePracticeIndex((index) => index + 1);
     } else {
+      setReviewedSessionCardIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.add(current.card.id);
+        return nextIds;
+      });
       reviewCard(current.card.id, "visual", result);
     }
 
