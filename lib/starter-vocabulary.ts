@@ -328,6 +328,10 @@ export function getKoEsStarterCardId(number: number): string {
   return `00000000-0000-4001-8000-${String(number).padStart(12, "0")}`;
 }
 
+export function getJjuKoEsStarterCardId(number: number): string {
+  return `00000000-0000-4002-8000-${String(number).padStart(12, "0")}`;
+}
+
 export function getStarterCreatedAt(number: number): string {
   return new Date(Date.UTC(2026, 0, 1, 0, 0, number)).toISOString();
 }

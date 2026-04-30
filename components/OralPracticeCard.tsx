@@ -3,6 +3,7 @@
 import { Mic, MicOff, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBadge";
 import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
@@ -192,12 +193,15 @@ export function OralPracticeCard({
 
   return (
     <div className="flex flex-1 flex-col justify-center gap-4">
-      <article className="rounded-lg border border-white bg-white p-5 shadow-soft">
+      <article className={`rounded-lg border p-5 shadow-soft ${getCardSurfaceClass(card)}`}>
         <div className="mb-7 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-              {card.category}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                {card.category}
+              </p>
+              <CardSourceBadge card={card} />
+            </div>
             <p className="mt-1 text-sm font-semibold text-slate-500">
               {card.type === "word" ? copy.common.word : copy.common.phrase}
             </p>

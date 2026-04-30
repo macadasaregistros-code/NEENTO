@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
+import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBadge";
 import { LevelBadge } from "@/components/LevelBadge";
 import { ProgressBadge } from "@/components/ProgressBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
@@ -273,7 +274,7 @@ export default function VocabularyPage() {
 
           return (
             <article
-              className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100"
+              className={`rounded-lg border p-4 shadow-sm ring-1 ring-slate-100 ${getCardSurfaceClass(card)}`}
               key={card.id}
             >
               <div className="flex items-start justify-between gap-3">
@@ -302,9 +303,7 @@ export default function VocabularyPage() {
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
                   {card.category}
                 </span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-                  {card.isStarter ? copy.common.starter : copy.common.userOwned}
-                </span>
+                <CardSourceBadge card={card} />
                 <LevelBadge label={copy.home.visual} level={progress.visualLevel} />
                 <LevelBadge label={copy.home.oral} level={progress.oralLevel} />
               </div>

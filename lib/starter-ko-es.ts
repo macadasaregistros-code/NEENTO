@@ -10,6 +10,8 @@ export const starterKoEsCards: VocabularyCard[] = starterVocabularyEntries.map((
   id: getKoEsStarterCardId(entry.number),
   type: "word",
   isStarter: true,
+  starterGroup: "default",
+  displayOrder: entry.number,
   learningMode: "ko_es",
   learningLanguage: "es",
   supportLanguage: "ko",

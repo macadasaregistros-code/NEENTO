@@ -10,6 +10,8 @@ export type ReviewResult = "success" | "fail";
 
 export type PracticeDirection = "learning_to_support" | "support_to_learning";
 
+export type StarterGroup = "default" | "jju";
+
 export type CardStatus =
   | "new"
   | "learning"
@@ -23,6 +25,8 @@ export interface VocabularyCard {
   type: CardType;
   userId?: string;
   isStarter: boolean;
+  starterGroup?: StarterGroup;
+  displayOrder?: number;
   learningMode: LearningMode;
   learningLanguage: LanguageCode;
   supportLanguage: LanguageCode;

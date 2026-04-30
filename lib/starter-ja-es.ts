@@ -10,6 +10,8 @@ export const starterJaEsCards: VocabularyCard[] = starterVocabularyEntries.map((
   id: getJaEsStarterCardId(entry.number),
   type: "word",
   isStarter: true,
+  starterGroup: "default",
+  displayOrder: entry.number,
   learningMode: "ja_es",
   learningLanguage: "ja",
   supportLanguage: "es",

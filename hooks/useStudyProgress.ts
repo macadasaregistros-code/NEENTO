@@ -34,6 +34,46 @@ function createLocalId(): string {
   return `local-${Date.now()}`;
 }
 
+function getCardSortPriority(card: VocabularyCard): number {
+  if (!card.isStarter) {
+    return 0;
+  }
+
+  if (card.starterGroup === "jju") {
+    return 1;
+  }
+
+  return 2;
+}
+
+function getCardSortValue(card: VocabularyCard): number {
+  if (typeof card.displayOrder === "number") {
+    return card.displayOrder;
+  }
+
+  const createdAt = Date.parse(card.createdAt);
+  return Number.isNaN(createdAt) ? Number.MAX_SAFE_INTEGER : createdAt;
+}
+
+function sortCards(cards: VocabularyCard[]): VocabularyCard[] {
+  return [...cards].sort((leftCard, rightCard) => {
+    const priorityDifference =
+      getCardSortPriority(leftCard) - getCardSortPriority(rightCard);
+
+    if (priorityDifference !== 0) {
+      return priorityDifference;
+    }
+
+    const orderDifference = getCardSortValue(leftCard) - getCardSortValue(rightCard);
+
+    if (orderDifference !== 0) {
+      return orderDifference;
+    }
+
+    return leftCard.createdAt.localeCompare(rightCard.createdAt);
+  });
+}
+
 function mergeCards(baseCards: VocabularyCard[], localCards: VocabularyCard[]): VocabularyCard[] {
   const cardsById = new Map<string, VocabularyCard>();
 
@@ -41,7 +81,7 @@ function mergeCards(baseCards: VocabularyCard[], localCards: VocabularyCard[]): 
     cardsById.set(card.id, card);
   });
 
-  return [...cardsById.values()];
+  return sortCards([...cardsById.values()]);
 }
 
 function mergeProgressForCards(
@@ -136,6 +176,7 @@ function createLocalCard(input: NewVocabularyCardInput): VocabularyCard {
     japaneseKana: isJapaneseMode && learningReading !== primaryText ? primaryText : undefined,
     spanish: isJapaneseMode ? supportText : primaryText,
     category: input.category.trim(),
+    displayOrder: Date.now(),
     createdAt: new Date().toISOString(),
   };
 }
@@ -230,7 +271,7 @@ export function useStudyProgress() {
   );
 
   const cards = useMemo(
-    () => allCards.filter((card) => card.learningMode === mode),
+    () => sortCards(allCards.filter((card) => card.learningMode === mode)),
     [allCards, mode],
   );
 

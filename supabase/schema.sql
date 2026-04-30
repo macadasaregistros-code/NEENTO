@@ -4,6 +4,8 @@ create table if not exists public.cards (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   is_starter boolean not null default false,
+  starter_group text,
+  display_order int,
   type text not null check (type in ('word', 'phrase')),
   learning_mode text not null default 'ja_es' check (learning_mode in ('ja_es', 'ko_es')),
   learning_language text not null default 'ja' check (learning_language in ('ja', 'es', 'ko')),
@@ -26,6 +28,12 @@ alter table public.cards
 
 alter table public.cards
   add column if not exists is_starter boolean not null default false;
+
+alter table public.cards
+  add column if not exists starter_group text;
+
+alter table public.cards
+  add column if not exists display_order int;
 
 alter table public.cards
   add column if not exists japanese_kana text;
@@ -74,6 +82,23 @@ alter table public.cards
   alter column support_language set not null,
   alter column learning_text set not null,
   alter column support_text set not null;
+
+update public.cards
+set starter_group = 'default'
+where is_starter = true
+  and starter_group is null;
+
+update public.cards
+set display_order = coalesce(display_order, extract(epoch from created_at)::int)
+where display_order is null;
+
+do $$
+begin
+  alter table public.cards
+    add constraint cards_starter_group_check
+    check (starter_group is null or starter_group in ('default', 'jju'));
+exception when duplicate_object then null;
+end $$;
 
 do $$
 begin
@@ -147,6 +172,12 @@ create index if not exists cards_is_starter_idx
 
 create index if not exists cards_learning_mode_idx
   on public.cards (learning_mode);
+
+create index if not exists cards_starter_group_idx
+  on public.cards (starter_group);
+
+create index if not exists cards_display_order_idx
+  on public.cards (display_order);
 
 create index if not exists card_progress_visual_due_idx
   on public.card_progress (visual_due_at);

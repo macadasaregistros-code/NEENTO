@@ -4,6 +4,7 @@ import { motion, type PanInfo } from "framer-motion";
 import { ArrowLeft, ArrowRight, ArrowUp, Volume2 } from "lucide-react";
 import { useState } from "react";
 
+import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBadge";
 import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
@@ -99,7 +100,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
     <div className="flex flex-1 flex-col justify-center gap-4">
       <motion.article
         animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-        className="touch-none select-none rounded-lg border border-white bg-white p-5 shadow-soft"
+        className={`touch-none select-none rounded-lg border p-5 shadow-soft ${getCardSurfaceClass(card)}`}
         drag
         dragConstraints={{ bottom: 0, left: 0, right: 0, top: 0 }}
         dragElastic={0.18}
@@ -109,9 +110,12 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
       >
         <div className="mb-7 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-              {card.category}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                {card.category}
+              </p>
+              <CardSourceBadge card={card} />
+            </div>
             <p className="mt-1 text-sm font-semibold text-slate-500">
               {card.type === "word" ? copy.common.word : copy.common.phrase}
             </p>

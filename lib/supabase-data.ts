@@ -6,6 +6,7 @@ import type {
   LanguageCode,
   LearningMode,
   NewVocabularyCardInput,
+  StarterGroup,
   VocabularyCard,
 } from "@/types/card";
 
@@ -13,6 +14,8 @@ interface CardRow {
   id: string;
   user_id: string | null;
   is_starter: boolean;
+  starter_group?: StarterGroup | null;
+  display_order?: number | null;
   type: CardType;
   learning_mode?: LearningMode | null;
   learning_language?: LanguageCode | null;
@@ -82,6 +85,8 @@ function toVocabularyCard(row: CardRow): VocabularyCard {
     id: row.id,
     userId: row.user_id ?? undefined,
     isStarter: row.is_starter,
+    starterGroup: row.starter_group ?? (row.is_starter ? "default" : undefined),
+    displayOrder: row.display_order ?? undefined,
     type: row.type,
     learningMode,
     learningLanguage: row.learning_language ?? getLegacyLearningLanguage(learningMode),
@@ -244,6 +249,8 @@ export async function createSupabaseCard(
   const payload = {
     user_id: userId,
     is_starter: false,
+    starter_group: null,
+    display_order: Date.now(),
     type: input.type,
     learning_mode: input.learningMode,
     learning_language: isJapaneseMode ? "ja" : "es",
