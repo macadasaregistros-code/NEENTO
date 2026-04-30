@@ -41,7 +41,7 @@ export default function HomePage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-500 shadow-sm ring-1 ring-slate-200">
-            {dataSource === "supabase" ? "Supabase" : "Mock"}
+            {dataSource === "supabase" ? "Supabase" : "Local"}
           </span>
           {syncError ? (
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-200">

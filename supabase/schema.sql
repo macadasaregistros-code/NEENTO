@@ -180,7 +180,7 @@ drop policy if exists "cards_delete_own" on public.cards;
 create policy "cards_select_starter_or_own"
 on public.cards
 for select
-to authenticated
+to anon, authenticated
 using (is_starter = true or user_id = auth.uid());
 
 create policy "cards_insert_own"

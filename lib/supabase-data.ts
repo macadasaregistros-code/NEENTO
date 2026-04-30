@@ -146,7 +146,7 @@ function toProgressPayload(progress: CardProgress, userId: string) {
   };
 }
 
-export async function fetchSupabaseStudyData(userId: string): Promise<StudyData | null> {
+export async function fetchSupabaseStudyData(userId?: string): Promise<StudyData | null> {
   const { data: cardRows, error: cardsError } = await supabase
     .from("cards")
     .select("*")
@@ -158,6 +158,13 @@ export async function fetchSupabaseStudyData(userId: string): Promise<StudyData 
   }
 
   const cards = (cardRows as CardRow[]).map(toVocabularyCard);
+
+  if (!userId) {
+    return {
+      cards,
+      progressList: cards.map((card) => createInitialProgress(card.id)),
+    };
+  }
 
   const { data: progressRows, error: progressError } = await supabase
     .from("card_progress")

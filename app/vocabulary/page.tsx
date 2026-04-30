@@ -6,7 +6,6 @@ import { FormEvent, useMemo, useState } from "react";
 
 import { LevelBadge } from "@/components/LevelBadge";
 import { ProgressBadge } from "@/components/ProgressBadge";
-import { useAuthSession } from "@/hooks/useAuthSession";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import { getSideContent } from "@/lib/learning";
@@ -32,7 +31,6 @@ const initialFormValues: FormValues = {
 };
 
 export default function VocabularyPage() {
-  const { user } = useAuthSession();
   const { config, mode } = useLearningMode();
   const copy = config.copy;
   const { cards, createCard, getProgress } = useStudyProgress();
@@ -133,26 +131,17 @@ export default function VocabularyPage() {
           <div>
             <p className="text-sm font-black text-ink">{copy.vocabulary.userCards}</p>
             <p className="mt-1 text-xs font-bold text-slate-500">
-              {user ? copy.vocabulary.privateDescription : copy.vocabulary.loginDescription}
+              {copy.vocabulary.privateDescription}
             </p>
           </div>
-          {user ? (
-            <button
-              className="flex h-11 items-center gap-2 rounded-lg bg-ink px-4 text-sm font-black text-white shadow-sm transition active:scale-[0.98]"
-              onClick={() => setIsCreating((value) => !value)}
-              type="button"
-            >
-              {isCreating ? <X aria-hidden="true" size={18} /> : <Plus aria-hidden="true" size={18} />}
-              {isCreating ? copy.common.close : copy.common.add}
-            </button>
-          ) : (
-            <Link
-              className="rounded-lg bg-ink px-4 py-3 text-sm font-black text-white shadow-sm"
-              href="/login"
-            >
-              {copy.common.login}
-            </Link>
-          )}
+          <button
+            className="flex h-11 items-center gap-2 rounded-lg bg-ink px-4 text-sm font-black text-white shadow-sm transition active:scale-[0.98]"
+            onClick={() => setIsCreating((value) => !value)}
+            type="button"
+          >
+            {isCreating ? <X aria-hidden="true" size={18} /> : <Plus aria-hidden="true" size={18} />}
+            {isCreating ? copy.common.close : copy.common.add}
+          </button>
         </div>
 
         {createMessage ? (
