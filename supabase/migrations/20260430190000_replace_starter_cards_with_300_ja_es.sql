@@ -1,3 +1,4 @@
+-- Replaces all starter cards with the 300 default JA/ES cards.
 delete from public.cards
 where is_starter = true;
 

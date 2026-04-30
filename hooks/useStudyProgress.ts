@@ -21,8 +21,8 @@ import type {
   VocabularyCard,
 } from "@/types/card";
 
-const STORAGE_KEY_PREFIX = "neento-card-progress-v1";
-const LOCAL_CARDS_STORAGE_KEY = "neento-local-cards-v1";
+const STORAGE_KEY_PREFIX = "neento-card-progress-v2";
+const LOCAL_CARDS_STORAGE_KEY = "neento-local-cards-v2";
 
 type DataSource = "local" | "supabase";
 
