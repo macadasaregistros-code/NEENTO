@@ -20,6 +20,7 @@ interface ModeCopy {
     createAccount: string;
     email: string;
     enter: string;
+    fullName: string;
     login: string;
     loginDescription: string;
     loginTitle: string;
@@ -164,6 +165,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         createAccount: "Crear cuenta",
         email: "Email",
         enter: "Entrar",
+        fullName: "Nombre completo",
         login: "Login",
         loginDescription:
           "Usa email y contraseña. Tu progreso y tus palabras quedan ligados a tu cuenta.",
@@ -312,6 +314,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         createAccount: "계정 만들기",
         email: "이메일",
         enter: "로그인",
+        fullName: "전체 이름",
         login: "로그인",
         loginDescription:
           "이메일과 비밀번호로 로그인하세요. 학습 기록과 내 단어가 계정에 저장됩니다.",

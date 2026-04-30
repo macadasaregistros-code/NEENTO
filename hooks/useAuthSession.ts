@@ -1,6 +1,6 @@
 "use client";
 
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
@@ -12,21 +12,27 @@ export function useAuthSession() {
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
+
       if (!isMounted) {
         return;
       }
 
       setSession(data.session);
       setIsLoading(false);
-    });
+    }
+
+    void loadSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, nextSession) => {
-      setSession(nextSession);
-      setIsLoading(false);
-    });
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, nextSession: Session | null) => {
+        setSession(nextSession);
+        setIsLoading(false);
+      },
+    );
 
     return () => {
       isMounted = false;

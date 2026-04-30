@@ -1,19 +1,33 @@
 "use client";
 
 import { LockKeyhole, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useMemo, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "sign_in" | "sign_up";
 
-export default function LoginPage() {
+function getSafeRedirectTo(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
+function LoginContent() {
   const { config } = useLearningMode();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const copy = config.copy.auth;
+  const redirectTo = useMemo(
+    () => getSafeRedirectTo(searchParams.get("redirectTo")),
+    [searchParams],
+  );
   const [authMode, setAuthMode] = useState<AuthMode>("sign_in");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -35,7 +49,10 @@ export default function LoginPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              full_name: fullName.trim(),
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
           },
         })
       : await supabase.auth.signInWithPassword({
@@ -62,7 +79,7 @@ export default function LoginPage() {
     }
 
     setMessage(isSignUp ? copy.accountCreated : copy.sessionStarted);
-    router.replace("/");
+    router.replace(redirectTo);
   }
 
   async function handleResendConfirmation() {
@@ -78,7 +95,7 @@ export default function LoginPage() {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
       },
     });
 
@@ -153,6 +170,22 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {isSignUp ? (
+          <label className="mt-6 block">
+            <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+              {copy.fullName}
+            </span>
+            <input
+              className="mt-2 h-14 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-ink outline-none transition focus:border-emerald-500 focus:bg-white"
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder={copy.fullName}
+              required
+              type="text"
+              value={fullName}
+            />
+          </label>
+        ) : null}
+
         <label className="mt-6 block">
           <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
             {copy.email}
@@ -219,5 +252,13 @@ export default function LoginPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -2,12 +2,14 @@
 
 import { LogIn, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { triggerHaptic } from "@/lib/haptics";
 
 export function AuthStatus() {
+  const router = useRouter();
   const { isLoading, signOut, user } = useAuthSession();
   const { config } = useLearningMode();
   const copy = config.copy.auth;
@@ -40,9 +42,10 @@ export function AuthStatus() {
       <button
         aria-label={copy.logout}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
-        onClick={() => {
+        onClick={async () => {
           triggerHaptic("light");
-          void signOut();
+          await signOut();
+          router.replace("/login");
         }}
         type="button"
       >

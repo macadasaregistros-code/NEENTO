@@ -6,6 +6,14 @@ import { Suspense, useEffect, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
 
+function getSafeRedirectTo(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,6 +22,7 @@ function AuthCallbackContent() {
   useEffect(() => {
     async function completeSignIn() {
       const code = searchParams.get("code");
+      const redirectTo = getSafeRedirectTo(searchParams.get("redirectTo"));
 
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -31,7 +40,7 @@ function AuthCallbackContent() {
         }
       }
 
-      router.replace("/");
+      router.replace(redirectTo);
     }
 
     void completeSignIn();

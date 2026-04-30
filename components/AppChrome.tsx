@@ -31,14 +31,16 @@ export function AppChrome({ children }: AppChromeProps) {
     }
 
     if (!isAuthenticated && !isPublic) {
-      router.replace("/login");
+      const redirectTo = `${pathname}${window.location.search}`;
+
+      router.replace(`/login?redirectTo=${encodeURIComponent(redirectTo)}`);
       return;
     }
 
     if (isAuthenticated && isAuthPage) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
-  }, [isAuthPage, isAuthenticated, isLoading, isPublic, router]);
+  }, [isAuthPage, isAuthenticated, isLoading, isPublic, pathname, router]);
 
   if (isLoading) {
     return (
