@@ -34,6 +34,9 @@ const statusStyles: Record<OralStatus, string> = {
   fail: "bg-red-100 text-red-800 ring-red-200",
 };
 
+const SUCCESS_ADVANCE_DELAY_MS = 650;
+const FAILED_ANSWER_REVEAL_MS = 3200;
+
 export function OralPracticeCard({
   card,
   direction,
@@ -147,7 +150,7 @@ export function OralPracticeCard({
       setIsLocked(true);
       stopListening();
       triggerHaptic("success");
-      scheduleReview("success", 650);
+      scheduleReview("success", SUCCESS_ADVANCE_DELAY_MS);
       return;
     }
 
@@ -161,7 +164,7 @@ export function OralPracticeCard({
       setIsRevealed(true);
       setIsLocked(true);
       stopListening();
-      scheduleReview("fail", 1200);
+      scheduleReview("fail", FAILED_ANSWER_REVEAL_MS);
       return;
     }
 
