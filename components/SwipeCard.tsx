@@ -2,7 +2,6 @@
 
 import { motion, type PanInfo } from "framer-motion";
 import { ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 
 import { LanguagePrompt } from "@/components/LanguagePrompt";
@@ -93,13 +92,13 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
         </div>
 
         {card.imageUrl ? (
-          <Image
-            alt=""
-            className="mb-7 h-36 w-full rounded-lg object-cover"
-            height={144}
-            src={card.imageUrl}
-            unoptimized
-            width={320}
+          <div
+            aria-hidden="true"
+            className="mb-7 h-36 w-full rounded-lg bg-mist bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url("${card.imageUrl}")`,
+              backgroundSize: "contain",
+            }}
           />
         ) : (
           <div className="mb-7 flex h-32 items-center justify-center rounded-lg bg-mist">
