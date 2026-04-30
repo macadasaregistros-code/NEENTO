@@ -17,6 +17,10 @@ function getSafeRedirectTo(value: string | null): string {
   return value;
 }
 
+function getEmailRedirectTo(origin: string, redirectTo: string): string {
+  return `${origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`;
+}
+
 function LoginContent() {
   const { config } = useLearningMode();
   const router = useRouter();
@@ -37,6 +41,16 @@ function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSignUp = authMode === "sign_up";
 
+  async function resendConfirmationEmail() {
+    return supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: getEmailRedirectTo(window.location.origin, redirectTo),
+      },
+    });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
@@ -52,7 +66,7 @@ function LoginContent() {
             data: {
               full_name: fullName.trim(),
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+            emailRedirectTo: getEmailRedirectTo(window.location.origin, redirectTo),
           },
         })
       : await supabase.auth.signInWithPassword({
@@ -73,6 +87,21 @@ function LoginContent() {
     }
 
     if (isSignUp && !authResponse.data.session) {
+      const identities = authResponse.data.user?.identities ?? [];
+
+      if (identities.length === 0) {
+        const { error: resendError } = await resendConfirmationEmail();
+
+        if (resendError) {
+          setError(resendError.message);
+        } else {
+          setMessage(copy.confirmationResent);
+        }
+
+        setNeedsConfirmation(true);
+        return;
+      }
+
       setNeedsConfirmation(true);
       setMessage(copy.checkConfirmationEmail);
       return;
@@ -95,7 +124,7 @@ function LoginContent() {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+        emailRedirectTo: getEmailRedirectTo(window.location.origin, redirectTo),
       },
     });
 
