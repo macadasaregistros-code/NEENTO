@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSignUp = authMode === "sign_up";
 
@@ -26,6 +28,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setError(null);
     setMessage(null);
+    setNeedsConfirmation(false);
 
     const authResponse = isSignUp
       ? await supabase.auth.signUp({
@@ -43,17 +46,51 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (authResponse.error) {
+      if (authResponse.error.message.toLowerCase().includes("email not confirmed")) {
+        setNeedsConfirmation(true);
+        setMessage(copy.checkConfirmationEmail);
+      }
+
       setError(authResponse.error.message);
       return;
     }
 
     if (isSignUp && !authResponse.data.session) {
+      setNeedsConfirmation(true);
       setMessage(copy.checkConfirmationEmail);
       return;
     }
 
     setMessage(isSignUp ? copy.accountCreated : copy.sessionStarted);
     router.replace("/");
+  }
+
+  async function handleResendConfirmation() {
+    if (!email) {
+      setError(copy.email);
+      return;
+    }
+
+    setIsResending(true);
+    setError(null);
+
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    setIsResending(false);
+
+    if (resendError) {
+      setError(resendError.message);
+      return;
+    }
+
+    setNeedsConfirmation(true);
+    setMessage(copy.confirmationResent);
   }
 
   return (
@@ -94,6 +131,7 @@ export default function LoginPage() {
               setAuthMode("sign_in");
               setError(null);
               setMessage(null);
+              setNeedsConfirmation(false);
             }}
             type="button"
           >
@@ -107,6 +145,7 @@ export default function LoginPage() {
               setAuthMode("sign_up");
               setError(null);
               setMessage(null);
+              setNeedsConfirmation(false);
             }}
             type="button"
           >
@@ -145,9 +184,24 @@ export default function LoginPage() {
         </label>
 
         {message ? (
-          <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 ring-1 ring-emerald-100">
-            {message}
-          </p>
+          <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 ring-1 ring-emerald-100">
+            <p>{message}</p>
+            {needsConfirmation ? (
+              <>
+                <p className="mt-2 text-xs leading-5 text-emerald-700">
+                  {copy.confirmationHelp}
+                </p>
+                <button
+                  className="mt-3 h-11 w-full rounded-lg bg-emerald-700 px-4 text-sm font-black text-white transition active:scale-[0.98] disabled:opacity-60"
+                  disabled={isResending}
+                  onClick={handleResendConfirmation}
+                  type="button"
+                >
+                  {isResending ? copy.resendingConfirmation : copy.resendConfirmation}
+                </button>
+              </>
+            ) : null}
+          </div>
         ) : null}
 
         {error ? (

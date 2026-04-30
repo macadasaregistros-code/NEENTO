@@ -31,6 +31,10 @@ interface ModeCopy {
     switchToLogin: string;
     switchToSignup: string;
     checkConfirmationEmail: string;
+    confirmationHelp: string;
+    confirmationResent: string;
+    resendConfirmation: string;
+    resendingConfirmation: string;
   };
   bottomNav: {
     home: string;
@@ -173,6 +177,11 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         switchToSignup: "Crear cuenta nueva",
         checkConfirmationEmail:
           "Cuenta creada. Revisa tu correo y confirma tu email para poder entrar.",
+        confirmationHelp:
+          "Si no llega, revisa spam/promociones o reenvia el correo de confirmacion.",
+        confirmationResent: "Correo de confirmacion reenviado.",
+        resendConfirmation: "Reenviar correo",
+        resendingConfirmation: "Reenviando...",
       },
       bottomNav: {
         home: "Home",
@@ -316,6 +325,11 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         switchToSignup: "새 계정 만들기",
         checkConfirmationEmail:
           "계정이 만들어졌습니다. 이메일을 확인하고 인증한 뒤 로그인하세요.",
+        confirmationHelp:
+          "메일이 오지 않으면 스팸함을 확인하거나 인증 메일을 다시 보내세요.",
+        confirmationResent: "인증 메일을 다시 보냈습니다.",
+        resendConfirmation: "인증 메일 다시 보내기",
+        resendingConfirmation: "다시 보내는 중...",
       },
       bottomNav: {
         home: "홈",
