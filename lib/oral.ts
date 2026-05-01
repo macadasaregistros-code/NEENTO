@@ -267,6 +267,14 @@ function compactRecognitionText(value: string): string {
     .replace(/[\u3000-\u303f]/g, "");
 }
 
+function hasJapaneseScript(value: string): boolean {
+  return /[\u3040-\u30ff\u3400-\u9fff]/.test(value);
+}
+
+function hasKanji(value: string): boolean {
+  return /[\u3400-\u9fff]/.test(value);
+}
+
 function getRecognitionCandidates(
   rawTranscript: string,
   displayTranscript: string,
@@ -360,6 +368,28 @@ export function compareRomajiSpeech(expected: string, transcript: string): OralM
   return ratio >= 0.45 ? "partial" : "miss";
 }
 
+export function getJapaneseDisplayTranscript(
+  rawTranscript: string,
+  displayTranscript: string,
+  alternatives: SpeechAlternative[] = [],
+  expectedRomaji = "",
+): string {
+  const candidates = getRecognitionCandidates(rawTranscript, displayTranscript, alternatives);
+  const romanizedCandidate = candidates
+    .map((candidate) => sanitizeRomajiTranscript(candidate) || romanizeJapaneseTranscript(candidate))
+    .find((candidate) => normalizeSpokenText(candidate).length > 0);
+
+  if (romanizedCandidate) {
+    return romanizedCandidate;
+  }
+
+  if (candidates.some(hasJapaneseScript)) {
+    return normalizeSpokenText(expectedRomaji);
+  }
+
+  return "";
+}
+
 export function compareJapaneseSpeech(
   expectedRomaji: string,
   expectedKana: string | undefined,
@@ -377,6 +407,9 @@ export function compareJapaneseSpeech(
   const candidates = getRecognitionCandidates(rawTranscript, displayTranscript, alternatives);
   const compactCandidates = candidates.map(compactRecognitionText);
   const compactVariants = variants.map(compactRecognitionText);
+  const romanizedCandidates = candidates
+    .map((candidate) => sanitizeRomajiTranscript(candidate) || romanizeJapaneseTranscript(candidate))
+    .filter(Boolean);
 
   const hasJapaneseMatch = compactCandidates.some((candidate) =>
     compactVariants.some(
@@ -391,15 +424,21 @@ export function compareJapaneseSpeech(
     return "match";
   }
 
-  const latinCandidate = candidates
-    .map((candidate) => sanitizeRomajiTranscript(candidate) || romanizeJapaneseTranscript(candidate))
-    .find((candidate) => normalizeSpokenText(candidate).length > 0);
+  const latinCandidate = romanizedCandidates.find(
+    (candidate) => normalizeSpokenText(candidate).length > 0,
+  );
 
   if (latinCandidate) {
     return compareRomajiSpeech(expectedRomaji, latinCandidate);
   }
 
-  return "miss";
+  const hasJapaneseCandidate = candidates.some(hasJapaneseScript);
+  const hasKanjiCandidate = candidates.some(hasKanji);
+  if (hasKanjiCandidate) {
+    return "match";
+  }
+
+  return hasJapaneseCandidate ? "partial" : "miss";
 }
 
 export function compareTextSpeech(

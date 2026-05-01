@@ -189,7 +189,7 @@ export function useSpeechRecognition() {
     recognition.lang = lang;
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 5;
+    recognition.maxAlternatives = 10;
     recognition.onstart = () => {
       setError(null);
       setIsListening(true);

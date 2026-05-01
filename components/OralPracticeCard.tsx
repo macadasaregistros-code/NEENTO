@@ -12,7 +12,11 @@ import { useLearningMode } from "@/hooks/useLearningMode";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { triggerHaptic } from "@/lib/haptics";
 import { getAnswerSide, getFirstSide, getSideContent, getSpeechLanguage } from "@/lib/learning";
-import { compareJapaneseSpeech, compareTextSpeech } from "@/lib/oral";
+import {
+  compareJapaneseSpeech,
+  compareTextSpeech,
+  getJapaneseDisplayTranscript,
+} from "@/lib/oral";
 import { getExpectedSpeech, speakText } from "@/lib/speech";
 import type {
   CardProgress,
@@ -92,7 +96,12 @@ export function OralPracticeCard({
   const isRecordingActive = isPressing || isListening;
   const displayedTranscript =
     answerContent.language === "ja"
-      ? transcript || (rawTranscript ? copy.speech.receivedAudio : "")
+      ? getJapaneseDisplayTranscript(
+          rawTranscript,
+          transcript,
+          alternatives,
+          answerContent.reading ?? answerContent.text,
+        )
       : rawTranscript || transcript;
   const heardText =
     displayedTranscript ||
