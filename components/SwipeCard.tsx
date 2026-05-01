@@ -13,10 +13,9 @@ import {
   getAnswerSide,
   getFirstSide,
   getSideContent,
-  getSpeechLanguage,
   type SideContent,
 } from "@/lib/learning";
-import { speakText } from "@/lib/speech";
+import { getSpeechPayload, speakText } from "@/lib/speech";
 import type {
   CardProgress,
   PracticeDirection,
@@ -80,8 +79,10 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
   }
 
   function handleSpeak(content: SideContent) {
+    const speech = getSpeechPayload(content);
+
     triggerHaptic("light");
-    speakText(content.text || content.reading || "", getSpeechLanguage(content.language));
+    speakText(speech.text, speech.lang);
   }
 
   function renderListenButton(content: SideContent) {
