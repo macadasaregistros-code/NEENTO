@@ -31,114 +31,114 @@ const recognitionVariantsByRomaji: Record<string, string[]> = {
 };
 
 const kanaDigraphs: Record<string, string> = {
-  きゃ: "kya",
-  きゅ: "kyu",
-  きょ: "kyo",
-  ぎゃ: "gya",
-  ぎゅ: "gyu",
-  ぎょ: "gyo",
-  しゃ: "sha",
-  しゅ: "shu",
-  しょ: "sho",
-  じゃ: "ja",
-  じゅ: "ju",
-  じょ: "jo",
-  ちゃ: "cha",
-  ちゅ: "chu",
-  ちょ: "cho",
-  にゃ: "nya",
-  にゅ: "nyu",
-  にょ: "nyo",
-  ひゃ: "hya",
-  ひゅ: "hyu",
-  ひょ: "hyo",
-  びゃ: "bya",
-  びゅ: "byu",
-  びょ: "byo",
-  ぴゃ: "pya",
-  ぴゅ: "pyu",
-  ぴょ: "pyo",
-  みゃ: "mya",
-  みゅ: "myu",
-  みょ: "myo",
-  りゃ: "rya",
-  りゅ: "ryu",
-  りょ: "ryo",
+  "\u304d\u3083": "kya",
+  "\u304d\u3085": "kyu",
+  "\u304d\u3087": "kyo",
+  "\u304e\u3083": "gya",
+  "\u304e\u3085": "gyu",
+  "\u304e\u3087": "gyo",
+  "\u3057\u3083": "sha",
+  "\u3057\u3085": "shu",
+  "\u3057\u3087": "sho",
+  "\u3058\u3083": "ja",
+  "\u3058\u3085": "ju",
+  "\u3058\u3087": "jo",
+  "\u3061\u3083": "cha",
+  "\u3061\u3085": "chu",
+  "\u3061\u3087": "cho",
+  "\u306b\u3083": "nya",
+  "\u306b\u3085": "nyu",
+  "\u306b\u3087": "nyo",
+  "\u3072\u3083": "hya",
+  "\u3072\u3085": "hyu",
+  "\u3072\u3087": "hyo",
+  "\u3073\u3083": "bya",
+  "\u3073\u3085": "byu",
+  "\u3073\u3087": "byo",
+  "\u3074\u3083": "pya",
+  "\u3074\u3085": "pyu",
+  "\u3074\u3087": "pyo",
+  "\u307f\u3083": "mya",
+  "\u307f\u3085": "myu",
+  "\u307f\u3087": "myo",
+  "\u308a\u3083": "rya",
+  "\u308a\u3085": "ryu",
+  "\u308a\u3087": "ryo",
 };
 
 const kanaMonographs: Record<string, string> = {
-  あ: "a",
-  い: "i",
-  う: "u",
-  え: "e",
-  お: "o",
-  か: "ka",
-  き: "ki",
-  く: "ku",
-  け: "ke",
-  こ: "ko",
-  が: "ga",
-  ぎ: "gi",
-  ぐ: "gu",
-  げ: "ge",
-  ご: "go",
-  さ: "sa",
-  し: "shi",
-  す: "su",
-  せ: "se",
-  そ: "so",
-  ざ: "za",
-  じ: "ji",
-  ず: "zu",
-  ぜ: "ze",
-  ぞ: "zo",
-  た: "ta",
-  ち: "chi",
-  つ: "tsu",
-  て: "te",
-  と: "to",
-  だ: "da",
-  ぢ: "ji",
-  づ: "zu",
-  で: "de",
-  ど: "do",
-  な: "na",
-  に: "ni",
-  ぬ: "nu",
-  ね: "ne",
-  の: "no",
-  は: "ha",
-  ひ: "hi",
-  ふ: "fu",
-  へ: "he",
-  ほ: "ho",
-  ば: "ba",
-  び: "bi",
-  ぶ: "bu",
-  べ: "be",
-  ぼ: "bo",
-  ぱ: "pa",
-  ぴ: "pi",
-  ぷ: "pu",
-  ぺ: "pe",
-  ぽ: "po",
-  ま: "ma",
-  み: "mi",
-  む: "mu",
-  め: "me",
-  も: "mo",
-  や: "ya",
-  ゆ: "yu",
-  よ: "yo",
-  ら: "ra",
-  り: "ri",
-  る: "ru",
-  れ: "re",
-  ろ: "ro",
-  わ: "wa",
-  を: "o",
-  ん: "n",
-  ゔ: "vu",
+  "\u3042": "a",
+  "\u3044": "i",
+  "\u3046": "u",
+  "\u3048": "e",
+  "\u304a": "o",
+  "\u304b": "ka",
+  "\u304d": "ki",
+  "\u304f": "ku",
+  "\u3051": "ke",
+  "\u3053": "ko",
+  "\u304c": "ga",
+  "\u304e": "gi",
+  "\u3050": "gu",
+  "\u3052": "ge",
+  "\u3054": "go",
+  "\u3055": "sa",
+  "\u3057": "shi",
+  "\u3059": "su",
+  "\u305b": "se",
+  "\u305d": "so",
+  "\u3056": "za",
+  "\u3058": "ji",
+  "\u305a": "zu",
+  "\u305c": "ze",
+  "\u305e": "zo",
+  "\u305f": "ta",
+  "\u3061": "chi",
+  "\u3064": "tsu",
+  "\u3066": "te",
+  "\u3068": "to",
+  "\u3060": "da",
+  "\u3062": "ji",
+  "\u3065": "zu",
+  "\u3067": "de",
+  "\u3069": "do",
+  "\u306a": "na",
+  "\u306b": "ni",
+  "\u306c": "nu",
+  "\u306d": "ne",
+  "\u306e": "no",
+  "\u306f": "ha",
+  "\u3072": "hi",
+  "\u3075": "fu",
+  "\u3078": "he",
+  "\u307b": "ho",
+  "\u3070": "ba",
+  "\u3073": "bi",
+  "\u3076": "bu",
+  "\u3079": "be",
+  "\u307c": "bo",
+  "\u3071": "pa",
+  "\u3074": "pi",
+  "\u3077": "pu",
+  "\u307a": "pe",
+  "\u307d": "po",
+  "\u307e": "ma",
+  "\u307f": "mi",
+  "\u3080": "mu",
+  "\u3081": "me",
+  "\u3082": "mo",
+  "\u3084": "ya",
+  "\u3086": "yu",
+  "\u3088": "yo",
+  "\u3089": "ra",
+  "\u308a": "ri",
+  "\u308b": "ru",
+  "\u308c": "re",
+  "\u308d": "ro",
+  "\u308f": "wa",
+  "\u3092": "o",
+  "\u3093": "n",
+  "\u3094": "vu",
 };
 
 function katakanaToHiragana(value: string): string {
@@ -169,9 +169,9 @@ function romanizeKana(value: string): string {
   const parts: string[] = [];
 
   for (let index = 0; index < normalized.length; index += 1) {
-    const character = normalized[index];
+    const character = normalized[index] ?? "";
 
-    if (character === "っ") {
+    if (character === "\u3063") {
       const nextPair = normalized.slice(index + 1, index + 3);
       const nextSingle = normalized[index + 1] ?? "";
       const nextRomaji = kanaDigraphs[nextPair] ?? kanaMonographs[nextSingle] ?? "";
@@ -184,7 +184,7 @@ function romanizeKana(value: string): string {
       continue;
     }
 
-    if (character === "ー") {
+    if (character === "\u30fc") {
       const vowel = getLastVowel(parts.join(""));
 
       if (vowel) {
@@ -207,7 +207,7 @@ function romanizeKana(value: string): string {
       continue;
     }
 
-    if (/[\s,.!?¿¡/()-]/.test(character)) {
+    if (/[\s,.!?\u00bf\u00a1/()-]/.test(character)) {
       parts.push(" ");
       continue;
     }
@@ -339,7 +339,7 @@ export function compareJapaneseSpeech(
     return compareRomajiSpeech(expectedRomaji, latinCandidate);
   }
 
-  return rawTranscript ? "miss" : "miss";
+  return "miss";
 }
 
 export function compareTextSpeech(
@@ -372,5 +372,5 @@ export function compareTextSpeech(
     return compareRomajiSpeech(latinExpected, latinCandidate);
   }
 
-  return rawTranscript ? "miss" : "miss";
+  return "miss";
 }
