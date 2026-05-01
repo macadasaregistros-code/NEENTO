@@ -134,6 +134,11 @@ export function OralPracticeCard({
       : phase === "evaluating"
         ? copy.speech.autoValidation
         : statusCopy[status];
+  const isFailAnswer = feedbackState === "fail" || status === "fail";
+  const answerPanelClass = isFailAnswer
+    ? "bg-red-50 ring-red-100"
+    : "bg-emerald-50 ring-emerald-100";
+  const answerLabelClass = isFailAnswer ? "text-red-700" : "text-emerald-700";
   const cardAnimate =
     exitDirection === "right"
       ? { opacity: 0, rotate: 7, scale: 0.96, x: 420, y: -8 }
@@ -235,6 +240,7 @@ export function OralPracticeCard({
       setStatus("success");
       setPhase("resolved");
       setFeedbackState("success");
+      setIsRevealed(true);
       setExitDirection("right");
       setIsLocked(true);
       stopListening();
@@ -550,8 +556,10 @@ export function OralPracticeCard({
           </div>
 
           {isRevealed ? (
-            <div className="rounded-lg bg-emerald-50 p-3 ring-1 ring-emerald-100">
-              <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-emerald-700">
+            <div className={`rounded-lg p-3 ring-1 ${answerPanelClass}`}>
+              <p
+                className={`text-[0.68rem] font-black uppercase tracking-[0.16em] ${answerLabelClass}`}
+              >
                 {copy.practice.answer}
               </p>
               <div className="mt-2">

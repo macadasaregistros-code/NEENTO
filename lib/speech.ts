@@ -177,6 +177,29 @@ const roboticVoiceNameHints = [
   "eloquence",
 ];
 
+const koreanNaturalVoiceNameHints = [
+  "natural",
+  "neural",
+  "online",
+  "premium",
+  "enhanced",
+  "google",
+  "sunhi",
+  "injoon",
+  "bongjin",
+  "gookmin",
+];
+
+const koreanRoboticVoiceNameHints = [
+  "desktop",
+  "standard",
+  "compact",
+  "legacy",
+  "basic",
+  "espeak",
+  "heami",
+];
+
 let cachedVoices: SpeechSynthesisVoice[] = [];
 let voicesPromise: Promise<SpeechSynthesisVoice[]> | null = null;
 
@@ -306,6 +329,47 @@ function getSpanishVoiceScore(voice: SpeechSynthesisVoice): number {
   return score + getVoiceNameScore(voice);
 }
 
+function getKoreanVoiceScore(voice: SpeechSynthesisVoice, lang: string): number {
+  const targetLang = normalizeLangTag(lang);
+  const voiceLang = normalizeLangTag(voice.lang);
+  const voiceName = voice.name.toLowerCase();
+  const naturalScore = koreanNaturalVoiceNameHints.reduce(
+    (score, hint) => score + (voiceName.includes(hint) ? 38 : 0),
+    0,
+  );
+  const roboticPenalty = koreanRoboticVoiceNameHints.reduce(
+    (score, hint) => score + (voiceName.includes(hint) ? 42 : 0),
+    0,
+  );
+  const exactScore = voiceLang === targetLang ? 320 : 0;
+  const regionalScore = voiceLang.startsWith("ko-") ? 210 : 0;
+  const baseScore = voiceLang === "ko" ? 180 : 0;
+  const microsoftScore =
+    voiceName.includes("microsoft") &&
+    (voiceName.includes("natural") || voiceName.includes("neural") || voiceName.includes("online"))
+      ? 36
+      : 0;
+  const localPenalty =
+    voice.localService &&
+    !voiceName.includes("google") &&
+    !voiceName.includes("natural") &&
+    !voiceName.includes("neural") &&
+    !voiceName.includes("online")
+      ? 34
+      : 0;
+
+  return (
+    exactScore +
+    regionalScore +
+    baseScore +
+    naturalScore +
+    microsoftScore +
+    (voice.default ? 2 : 0) -
+    roboticPenalty -
+    localPenalty
+  );
+}
+
 function getVoiceScore(voice: SpeechSynthesisVoice, lang: string): number {
   const targetLang = normalizeLangTag(lang);
   const baseLanguage = getBaseLanguage(targetLang);
@@ -313,6 +377,10 @@ function getVoiceScore(voice: SpeechSynthesisVoice, lang: string): number {
 
   if (baseLanguage === "es") {
     return getSpanishVoiceScore(voice);
+  }
+
+  if (baseLanguage === "ko") {
+    return getKoreanVoiceScore(voice, lang);
   }
 
   return (
@@ -340,7 +408,7 @@ function getCompatibleVoice(
     })[0];
 }
 
-function romajiToHiragana(value: string): string {
+export function romajiToHiragana(value: string): string {
   const source = value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -442,7 +510,7 @@ function getSpeechRate(lang: string): number {
   }
 
   if (lang.startsWith("ko")) {
-    return 0.86;
+    return 0.94;
   }
 
   return 0.92;

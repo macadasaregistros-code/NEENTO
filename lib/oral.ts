@@ -1,3 +1,5 @@
+import { romajiToHiragana } from "@/lib/speech";
+
 export type OralMatch = "match" | "partial" | "miss";
 
 export interface SpeechAlternative {
@@ -310,7 +312,9 @@ export function compareJapaneseSpeech(
   alternatives: SpeechAlternative[] = [],
 ): OralMatch {
   const normalizedExpected = normalizeSpokenText(expectedRomaji);
+  const expectedKanaFromRomaji = romajiToHiragana(normalizedExpected);
   const variants = [
+    ...(expectedKanaFromRomaji ? [expectedKanaFromRomaji] : []),
     ...(recognitionVariantsByRomaji[normalizedExpected] ?? []),
     ...(expectedKana ? [expectedKana] : []),
   ];
@@ -332,7 +336,7 @@ export function compareJapaneseSpeech(
   }
 
   const latinCandidate = candidates
-    .map(sanitizeRomajiTranscript)
+    .map((candidate) => sanitizeRomajiTranscript(candidate) || romanizeJapaneseTranscript(candidate))
     .find((candidate) => normalizeSpokenText(candidate).length > 0);
 
   if (latinCandidate) {
