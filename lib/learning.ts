@@ -493,3 +493,15 @@ export function getSpeechLanguage(language: LanguageCode): string {
 
   return "es-US";
 }
+
+export function getSpeechRecognitionLanguages(language: LanguageCode): string[] {
+  if (language === "ja") {
+    return ["ja-JP", "ja"];
+  }
+
+  if (language === "ko") {
+    return ["ko-KR", "ko"];
+  }
+
+  return ["es-US", "es-419", "es-MX", "es-CO", "es-ES", "es"];
+}

@@ -11,7 +11,12 @@ import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { triggerHaptic } from "@/lib/haptics";
-import { getAnswerSide, getFirstSide, getSideContent, getSpeechLanguage } from "@/lib/learning";
+import {
+  getAnswerSide,
+  getFirstSide,
+  getSideContent,
+  getSpeechRecognitionLanguages,
+} from "@/lib/learning";
 import {
   compareJapaneseSpeech,
   compareTextSpeech,
@@ -91,7 +96,7 @@ export function OralPracticeCard({
   } = useSpeechRecognition();
   const promptContent = getSideContent(card, getFirstSide(direction));
   const answerContent = getSideContent(card, getAnswerSide(direction));
-  const recognitionLanguage = getSpeechLanguage(answerContent.language);
+  const recognitionLanguages = getSpeechRecognitionLanguages(answerContent.language);
   const hasSpeechResult = Boolean(rawTranscript || transcript);
   const isRecordingActive = isPressing || isListening;
   const displayedTranscript =
@@ -338,7 +343,7 @@ export function OralPracticeCard({
     setStatus("idle");
     resetTranscript();
     triggerHaptic("light");
-    startListening(recognitionLanguage);
+    startListening(recognitionLanguages);
   }
 
   function endRecording(event: PointerEvent<HTMLButtonElement>) {

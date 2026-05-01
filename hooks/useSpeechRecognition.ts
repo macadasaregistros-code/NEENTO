@@ -33,6 +33,7 @@ interface BrowserSpeechRecognition {
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 type BrowserAudioContextConstructor = new () => AudioContext;
+type SpeechRecognitionLanguageInput = string | string[];
 
 declare global {
   interface Window {
@@ -169,7 +170,7 @@ export function useSpeechRecognition() {
     setIsListening(false);
   }, [stopAudioMeter]);
 
-  const startListening = useCallback((lang = "ja-JP") => {
+  const startListening = useCallback((langInput: SpeechRecognitionLanguageInput = "ja-JP") => {
     const SpeechRecognitionConstructor = getSpeechRecognitionConstructor();
 
     if (!SpeechRecognitionConstructor) {
@@ -178,70 +179,101 @@ export function useSpeechRecognition() {
       return;
     }
 
-    try {
-      recognitionRef.current?.abort();
-    } catch {
-      // Ignore stale recognition instances.
-    }
+    const languages = (Array.isArray(langInput) ? langInput : [langInput]).filter(Boolean);
 
-    const recognition = new SpeechRecognitionConstructor();
-
-    recognition.lang = lang;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 10;
-    recognition.onstart = () => {
-      setError(null);
-      setIsListening(true);
-      void startAudioMeter();
-    };
-    recognition.onend = () => {
-      setIsListening(false);
-      stopAudioMeter();
-    };
-    recognition.onerror = (event) => {
-      setError(`No se pudo escuchar: ${event.error}`);
-      setIsListening(false);
-      stopAudioMeter();
-    };
-    recognition.onresult = (event) => {
-      const latestResult = event.results[event.results.length - 1];
-      const nextAlternatives = latestResult
-        ? Array.from(latestResult).map((alternative) => ({
-            confidence: alternative.confidence,
-            transcript: alternative.transcript,
-          }))
-        : [];
-      const nextTranscript = Array.from(event.results)
-        .map((result) => result[0]?.transcript ?? "")
-        .join(" ")
-        .trim();
-
-      setRawTranscript(nextTranscript);
-      setTranscript(
-        lang.startsWith("ja")
-          ? romanizeJapaneseTranscript(nextTranscript)
-          : sanitizeRomajiTranscript(nextTranscript),
-      );
-      setAlternatives(nextAlternatives);
-      setConfidence(nextAlternatives[0]?.confidence ?? 0);
-      setIsFinal(Boolean(latestResult?.isFinal));
-    };
-
-    recognitionRef.current = recognition;
     setTranscript("");
     setRawTranscript("");
     setAlternatives([]);
     setConfidence(0);
     setIsFinal(false);
 
-    try {
-      recognition.start();
-    } catch {
-      setError("No se pudo iniciar el microfono.");
-      setIsListening(false);
-      stopAudioMeter();
-    }
+    const startRecognitionWithLanguage = (languageIndex: number) => {
+      const lang = languages[languageIndex] ?? "ja-JP";
+
+      try {
+        recognitionRef.current?.abort();
+      } catch {
+        // Ignore stale recognition instances.
+      }
+
+      const recognition = new SpeechRecognitionConstructor();
+
+      recognition.lang = lang;
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 10;
+      recognition.onstart = () => {
+        if (recognitionRef.current !== recognition) {
+          return;
+        }
+
+        setError(null);
+        setIsListening(true);
+        void startAudioMeter();
+      };
+      recognition.onend = () => {
+        if (recognitionRef.current !== recognition) {
+          return;
+        }
+
+        setIsListening(false);
+        stopAudioMeter();
+      };
+      recognition.onerror = (event) => {
+        const shouldTryFallback =
+          event.error === "language-not-supported" &&
+          languageIndex < languages.length - 1;
+
+        if (shouldTryFallback) {
+          startRecognitionWithLanguage(languageIndex + 1);
+          return;
+        }
+
+        setError(`No se pudo escuchar: ${event.error}`);
+        setIsListening(false);
+        stopAudioMeter();
+      };
+      recognition.onresult = (event) => {
+        const latestResult = event.results[event.results.length - 1];
+        const nextAlternatives = latestResult
+          ? Array.from(latestResult).map((alternative) => ({
+              confidence: alternative.confidence,
+              transcript: alternative.transcript,
+            }))
+          : [];
+        const nextTranscript = Array.from(event.results)
+          .map((result) => result[0]?.transcript ?? "")
+          .join(" ")
+          .trim();
+
+        setRawTranscript(nextTranscript);
+        setTranscript(
+          lang.startsWith("ja")
+            ? romanizeJapaneseTranscript(nextTranscript)
+            : sanitizeRomajiTranscript(nextTranscript),
+        );
+        setAlternatives(nextAlternatives);
+        setConfidence(nextAlternatives[0]?.confidence ?? 0);
+        setIsFinal(Boolean(latestResult?.isFinal));
+      };
+
+      recognitionRef.current = recognition;
+
+      try {
+        recognition.start();
+      } catch {
+        if (languageIndex < languages.length - 1) {
+          startRecognitionWithLanguage(languageIndex + 1);
+          return;
+        }
+
+        setError("No se pudo iniciar el microfono.");
+        setIsListening(false);
+        stopAudioMeter();
+      }
+    };
+
+    startRecognitionWithLanguage(0);
   }, [startAudioMeter, stopAudioMeter]);
 
   const resetTranscript = useCallback(() => {
