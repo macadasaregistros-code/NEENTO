@@ -281,6 +281,61 @@ function getRecognitionCandidates(
   );
 }
 
+function compactRomaji(value: string): string {
+  return normalizeSpokenText(value).replace(/\s+/g, "");
+}
+
+function getEditDistance(leftValue: string, rightValue: string): number {
+  const left = Array.from(leftValue);
+  const right = Array.from(rightValue);
+  const distances = Array.from({ length: left.length + 1 }, (_, index) => index);
+
+  for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+    let previousDiagonal = distances[0];
+    distances[0] = rightIndex;
+
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+      const previousAbove = distances[leftIndex];
+      const cost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+
+      distances[leftIndex] = Math.min(
+        distances[leftIndex] + 1,
+        distances[leftIndex - 1] + 1,
+        previousDiagonal + cost,
+      );
+      previousDiagonal = previousAbove;
+    }
+  }
+
+  return distances[left.length] ?? Number.MAX_SAFE_INTEGER;
+}
+
+function isCloseSpokenMatch(expected: string, transcript: string): boolean {
+  const compactExpected = compactRomaji(expected);
+  const compactTranscript = compactRomaji(transcript);
+
+  if (!compactExpected || !compactTranscript) {
+    return false;
+  }
+
+  if (
+    compactExpected === compactTranscript ||
+    compactTranscript.includes(compactExpected) ||
+    (compactTranscript.length >= 4 && compactExpected.includes(compactTranscript))
+  ) {
+    return true;
+  }
+
+  if (compactExpected.length < 4 || compactTranscript.length < 4) {
+    return false;
+  }
+
+  const distance = getEditDistance(compactExpected, compactTranscript);
+  const allowedDistance = Math.max(1, Math.floor(compactExpected.length * 0.24));
+
+  return distance <= allowedDistance;
+}
+
 export function compareRomajiSpeech(expected: string, transcript: string): OralMatch {
   const normalizedExpected = normalizeSpokenText(expected);
   const normalizedTranscript = normalizeSpokenText(transcript);
@@ -289,10 +344,7 @@ export function compareRomajiSpeech(expected: string, transcript: string): OralM
     return "miss";
   }
 
-  if (
-    normalizedTranscript === normalizedExpected ||
-    normalizedTranscript.includes(normalizedExpected)
-  ) {
+  if (isCloseSpokenMatch(normalizedExpected, normalizedTranscript)) {
     return "match";
   }
 
@@ -301,7 +353,11 @@ export function compareRomajiSpeech(expected: string, transcript: string): OralM
   const matchedTokens = expectedTokens.filter((token) => transcriptTokens.has(token));
   const ratio = matchedTokens.length / expectedTokens.length;
 
-  return ratio >= 0.5 ? "partial" : "miss";
+  if (ratio >= 0.72) {
+    return "match";
+  }
+
+  return ratio >= 0.45 ? "partial" : "miss";
 }
 
 export function compareJapaneseSpeech(

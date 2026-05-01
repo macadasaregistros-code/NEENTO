@@ -40,10 +40,11 @@ const statusDotStyles: Record<OralStatus, string> = {
   success: "bg-green-400",
 };
 
-const SUCCESS_ADVANCE_DELAY_MS = 850;
-const FAILED_ANSWER_REVEAL_MS = 3200;
-const FAILED_EXIT_DELAY_MS = 2300;
-const MANUAL_FAIL_DELAY_MS = 520;
+const SUCCESS_EXIT_DELAY_MS = 1250;
+const SUCCESS_ADVANCE_DELAY_MS = 2100;
+const FAILED_ANSWER_REVEAL_MS = 4200;
+const FAILED_EXIT_DELAY_MS = 3100;
+const MANUAL_FAIL_DELAY_MS = 900;
 const waveformBars = [
   14, 20, 28, 18, 34, 42, 24, 38, 48, 30, 42, 54, 34, 46, 40, 24, 36, 48, 28, 40,
   30, 22,
@@ -59,7 +60,9 @@ export function OralPracticeCard({
   const copy = config.copy;
   const reviewTimeoutRef = useRef<number | null>(null);
   const exitTimeoutRef = useRef<number | null>(null);
-  const lastEvaluatedAttemptRef = useRef<string | null>(null);
+  const attemptIdRef = useRef(0);
+  const evaluatedAttemptIdRef = useRef<number | null>(null);
+  const [activeAttemptId, setActiveAttemptId] = useState(0);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
   const [exitDirection, setExitDirection] = useState<ExitDirection>(null);
@@ -198,7 +201,9 @@ export function OralPracticeCard({
       exitTimeoutRef.current = null;
     }
 
-    lastEvaluatedAttemptRef.current = null;
+    attemptIdRef.current = 0;
+    evaluatedAttemptIdRef.current = null;
+    setActiveAttemptId(0);
     setFailedAttempts(0);
     setFeedbackState(null);
     setExitDirection(null);
@@ -227,13 +232,18 @@ export function OralPracticeCard({
 
   useEffect(() => {
     const shouldEvaluate =
-      hasSpeechResult && !isLocked && !isListening && !isPressing && attemptFingerprint;
+      activeAttemptId > 0 &&
+      hasSpeechResult &&
+      !isLocked &&
+      !isListening &&
+      !isPressing &&
+      attemptFingerprint;
 
-    if (!shouldEvaluate || lastEvaluatedAttemptRef.current === attemptFingerprint) {
+    if (!shouldEvaluate || evaluatedAttemptIdRef.current === activeAttemptId) {
       return;
     }
 
-    lastEvaluatedAttemptRef.current = attemptFingerprint;
+    evaluatedAttemptIdRef.current = activeAttemptId;
     setPhase("evaluating");
 
     if (match === "match") {
@@ -241,10 +251,12 @@ export function OralPracticeCard({
       setPhase("resolved");
       setFeedbackState("success");
       setIsRevealed(true);
-      setExitDirection("right");
       setIsLocked(true);
       stopListening();
       triggerHaptic("success");
+      exitTimeoutRef.current = window.setTimeout(() => {
+        setExitDirection("right");
+      }, SUCCESS_EXIT_DELAY_MS);
       scheduleReview("success", SUCCESS_ADVANCE_DELAY_MS);
       return;
     }
@@ -271,6 +283,7 @@ export function OralPracticeCard({
     setStatus("retry");
     setPhase("idle");
   }, [
+    activeAttemptId,
     attemptFingerprint,
     failedAttempts,
     hasSpeechResult,
@@ -305,7 +318,10 @@ export function OralPracticeCard({
       return;
     }
 
-    lastEvaluatedAttemptRef.current = null;
+    const nextAttemptId = attemptIdRef.current + 1;
+
+    attemptIdRef.current = nextAttemptId;
+    setActiveAttemptId(nextAttemptId);
     setFeedbackState(null);
     setIsPressing(true);
     setPhase("recording");
