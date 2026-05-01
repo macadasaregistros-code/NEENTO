@@ -17,7 +17,7 @@ export function CardSourceBadge({ card }: CardSourceBadgeProps) {
   const className = !card.isStarter
     ? "bg-emerald-100 text-emerald-900 ring-emerald-200"
     : card.starterGroup === "jju"
-      ? "bg-sky-100 text-sky-900 ring-sky-200"
+      ? "bg-sky-200 text-sky-950 ring-sky-300"
       : "bg-amber-200 text-amber-950 ring-amber-300";
 
   return (
@@ -35,7 +35,7 @@ export function getCardSurfaceClass(
   }
 
   if (card.starterGroup === "jju") {
-    return "border-sky-200 bg-gradient-to-b from-sky-50 via-white to-sky-100/70 shadow-sky-100";
+    return "border-sky-300 bg-sky-100/90 shadow-sky-200";
   }
 
   return "border-amber-300 bg-amber-50/90 shadow-amber-100";
