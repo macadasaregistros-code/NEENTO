@@ -9,6 +9,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { SwipeCard } from "@/components/SwipeCard";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
+import {
+  createPracticeSessionSeed,
+  orderDueCards,
+  orderPracticeCards,
+} from "@/lib/practice-order";
 import type { PracticeDirection, ReviewResult } from "@/types/card";
 
 export default function VisualPracticePage() {
@@ -19,15 +24,18 @@ export default function VisualPracticePage() {
   const [direction, setDirection] = useState<PracticeDirection>(
     config.defaultVisualDirection,
   );
+  const [sessionSeed, setSessionSeed] = useState("initial");
   const [isFreePractice, setIsFreePractice] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
   const [reviewedSessionCardIds, setReviewedSessionCardIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const dueCurrent = visualDueCards.find(
+  const orderedDueCards = orderDueCards(visualDueCards, sessionSeed);
+  const orderedFreePracticeCards = orderPracticeCards(cards, sessionSeed);
+  const dueCurrent = orderedDueCards.find(
     ({ card }) => !reviewedSessionCardIds.has(card.id),
   );
-  const freeCurrentCard = cards[freePracticeIndex];
+  const freeCurrentCard = orderedFreePracticeCards[freePracticeIndex];
   const current = isFreePractice
     ? freeCurrentCard
       ? {
@@ -42,6 +50,7 @@ export default function VisualPracticePage() {
 
   useEffect(() => {
     setDirection(config.defaultVisualDirection);
+    setSessionSeed(createPracticeSessionSeed());
     setIsFreePractice(false);
     setFreePracticeIndex(0);
     setReviewedSessionCardIds(new Set());
@@ -77,6 +86,7 @@ export default function VisualPracticePage() {
 
   function startFreePractice() {
     setFeedback(null);
+    setSessionSeed(createPracticeSessionSeed());
     setFreePracticeIndex(0);
     setIsFreePractice(true);
   }

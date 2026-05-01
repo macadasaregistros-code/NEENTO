@@ -9,6 +9,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { OralPracticeCard } from "@/components/OralPracticeCard";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
+import {
+  createPracticeSessionSeed,
+  orderDueCards,
+  orderPracticeCards,
+} from "@/lib/practice-order";
 import type { PracticeDirection, ReviewResult } from "@/types/card";
 
 export default function OralPracticePage() {
@@ -19,15 +24,18 @@ export default function OralPracticePage() {
   const [direction, setDirection] = useState<PracticeDirection>(
     config.defaultOralDirection,
   );
+  const [sessionSeed, setSessionSeed] = useState("initial");
   const [isFreePractice, setIsFreePractice] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
   const [reviewedSessionCardIds, setReviewedSessionCardIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const dueCurrent = oralDueCards.find(
+  const orderedDueCards = orderDueCards(oralDueCards, sessionSeed);
+  const orderedFreePracticeCards = orderPracticeCards(cards, sessionSeed);
+  const dueCurrent = orderedDueCards.find(
     ({ card }) => !reviewedSessionCardIds.has(card.id),
   );
-  const freeCurrentCard = cards[freePracticeIndex];
+  const freeCurrentCard = orderedFreePracticeCards[freePracticeIndex];
   const current = isFreePractice
     ? freeCurrentCard
       ? {
@@ -42,6 +50,7 @@ export default function OralPracticePage() {
 
   useEffect(() => {
     setDirection(config.defaultOralDirection);
+    setSessionSeed(createPracticeSessionSeed());
     setIsFreePractice(false);
     setFreePracticeIndex(0);
     setReviewedSessionCardIds(new Set());
@@ -77,6 +86,7 @@ export default function OralPracticePage() {
 
   function startFreePractice() {
     setFeedback(null);
+    setSessionSeed(createPracticeSessionSeed());
     setFreePracticeIndex(0);
     setIsFreePractice(true);
   }
