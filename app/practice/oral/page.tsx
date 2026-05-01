@@ -82,7 +82,7 @@ export default function OralPracticePage() {
   }
 
   return (
-    <div className="relative flex flex-1 flex-col gap-5">
+    <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <header className="flex items-center justify-between gap-3 pt-2">
         <DirectionToggle
           className="max-w-[13.5rem] flex-1"

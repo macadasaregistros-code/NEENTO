@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { sanitizeRomajiTranscript, type SpeechAlternative } from "@/lib/oral";
+import {
+  romanizeJapaneseTranscript,
+  sanitizeRomajiTranscript,
+  type SpeechAlternative,
+} from "@/lib/oral";
 
 interface BrowserSpeechRecognitionEvent {
   results: SpeechRecognitionResultList;
@@ -45,8 +49,12 @@ function getSpeechRecognitionConstructor() {
 
 export function useSpeechRecognition() {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const [transcript, setTranscript] = useState("");
   const [rawTranscript, setRawTranscript] = useState("");
   const [alternatives, setAlternatives] = useState<SpeechAlternative[]>([]);
@@ -54,18 +62,79 @@ export function useSpeechRecognition() {
   const [error, setError] = useState<string | null>(null);
   const [isFinal, setIsFinal] = useState(false);
 
+  const stopAudioMeter = useCallback(() => {
+    if (animationFrameRef.current) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+
+    if (audioContextRef.current?.state !== "closed") {
+      void audioContextRef.current?.close();
+    }
+
+    audioContextRef.current = null;
+    setAudioLevel(0);
+  }, []);
+
+  const startAudioMeter = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return;
+    }
+
+    stopAudioMeter();
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+
+      analyser.fftSize = 256;
+      const samples = new Uint8Array(analyser.frequencyBinCount);
+      source.connect(analyser);
+      mediaStreamRef.current = stream;
+      audioContextRef.current = audioContext;
+
+      const tick = () => {
+        analyser.getByteTimeDomainData(samples);
+
+        let sum = 0;
+
+        samples.forEach((sample) => {
+          const centered = (sample - 128) / 128;
+          sum += centered * centered;
+        });
+
+        const rms = Math.sqrt(sum / samples.length);
+        const nextLevel = Math.min(1, rms * 5);
+
+        setAudioLevel((currentLevel) => currentLevel * 0.55 + nextLevel * 0.45);
+        animationFrameRef.current = window.requestAnimationFrame(tick);
+      };
+
+      tick();
+    } catch {
+      setAudioLevel(0);
+    }
+  }, [stopAudioMeter]);
+
   useEffect(() => {
     setIsSupported(Boolean(getSpeechRecognitionConstructor()));
 
     return () => {
       recognitionRef.current?.abort();
+      stopAudioMeter();
     };
-  }, []);
+  }, [stopAudioMeter]);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
+    stopAudioMeter();
     setIsListening(false);
-  }, []);
+  }, [stopAudioMeter]);
 
   const startListening = useCallback((lang = "ja-JP") => {
     const SpeechRecognitionConstructor = getSpeechRecognitionConstructor();
@@ -87,13 +156,16 @@ export function useSpeechRecognition() {
     recognition.onstart = () => {
       setError(null);
       setIsListening(true);
+      void startAudioMeter();
     };
     recognition.onend = () => {
       setIsListening(false);
+      stopAudioMeter();
     };
     recognition.onerror = (event) => {
       setError(`No se pudo escuchar: ${event.error}`);
       setIsListening(false);
+      stopAudioMeter();
     };
     recognition.onresult = (event) => {
       const latestResult = event.results[event.results.length - 1];
@@ -109,7 +181,11 @@ export function useSpeechRecognition() {
         .trim();
 
       setRawTranscript(nextTranscript);
-      setTranscript(sanitizeRomajiTranscript(nextTranscript));
+      setTranscript(
+        lang.startsWith("ja")
+          ? romanizeJapaneseTranscript(nextTranscript)
+          : sanitizeRomajiTranscript(nextTranscript),
+      );
       setAlternatives(nextAlternatives);
       setConfidence(nextAlternatives[0]?.confidence ?? 0);
       setIsFinal(Boolean(latestResult?.isFinal));
@@ -122,7 +198,7 @@ export function useSpeechRecognition() {
     setConfidence(0);
     setIsFinal(false);
     recognition.start();
-  }, []);
+  }, [startAudioMeter, stopAudioMeter]);
 
   const resetTranscript = useCallback(() => {
     setTranscript("");
@@ -135,6 +211,7 @@ export function useSpeechRecognition() {
 
   return {
     alternatives,
+    audioLevel,
     confidence,
     error,
     isFinal,

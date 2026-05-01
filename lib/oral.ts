@@ -30,9 +30,219 @@ const recognitionVariantsByRomaji: Record<string, string[]> = {
   ],
 };
 
+const kanaDigraphs: Record<string, string> = {
+  きゃ: "kya",
+  きゅ: "kyu",
+  きょ: "kyo",
+  ぎゃ: "gya",
+  ぎゅ: "gyu",
+  ぎょ: "gyo",
+  しゃ: "sha",
+  しゅ: "shu",
+  しょ: "sho",
+  じゃ: "ja",
+  じゅ: "ju",
+  じょ: "jo",
+  ちゃ: "cha",
+  ちゅ: "chu",
+  ちょ: "cho",
+  にゃ: "nya",
+  にゅ: "nyu",
+  にょ: "nyo",
+  ひゃ: "hya",
+  ひゅ: "hyu",
+  ひょ: "hyo",
+  びゃ: "bya",
+  びゅ: "byu",
+  びょ: "byo",
+  ぴゃ: "pya",
+  ぴゅ: "pyu",
+  ぴょ: "pyo",
+  みゃ: "mya",
+  みゅ: "myu",
+  みょ: "myo",
+  りゃ: "rya",
+  りゅ: "ryu",
+  りょ: "ryo",
+};
+
+const kanaMonographs: Record<string, string> = {
+  あ: "a",
+  い: "i",
+  う: "u",
+  え: "e",
+  お: "o",
+  か: "ka",
+  き: "ki",
+  く: "ku",
+  け: "ke",
+  こ: "ko",
+  が: "ga",
+  ぎ: "gi",
+  ぐ: "gu",
+  げ: "ge",
+  ご: "go",
+  さ: "sa",
+  し: "shi",
+  す: "su",
+  せ: "se",
+  そ: "so",
+  ざ: "za",
+  じ: "ji",
+  ず: "zu",
+  ぜ: "ze",
+  ぞ: "zo",
+  た: "ta",
+  ち: "chi",
+  つ: "tsu",
+  て: "te",
+  と: "to",
+  だ: "da",
+  ぢ: "ji",
+  づ: "zu",
+  で: "de",
+  ど: "do",
+  な: "na",
+  に: "ni",
+  ぬ: "nu",
+  ね: "ne",
+  の: "no",
+  は: "ha",
+  ひ: "hi",
+  ふ: "fu",
+  へ: "he",
+  ほ: "ho",
+  ば: "ba",
+  び: "bi",
+  ぶ: "bu",
+  べ: "be",
+  ぼ: "bo",
+  ぱ: "pa",
+  ぴ: "pi",
+  ぷ: "pu",
+  ぺ: "pe",
+  ぽ: "po",
+  ま: "ma",
+  み: "mi",
+  む: "mu",
+  め: "me",
+  も: "mo",
+  や: "ya",
+  ゆ: "yu",
+  よ: "yo",
+  ら: "ra",
+  り: "ri",
+  る: "ru",
+  れ: "re",
+  ろ: "ro",
+  わ: "wa",
+  を: "o",
+  ん: "n",
+  ゔ: "vu",
+};
+
+function katakanaToHiragana(value: string): string {
+  return Array.from(value)
+    .map((character) => {
+      const code = character.charCodeAt(0);
+
+      if (code >= 0x30a1 && code <= 0x30f6) {
+        return String.fromCharCode(code - 0x60);
+      }
+
+      return character;
+    })
+    .join("");
+}
+
+function getFirstConsonant(value: string): string {
+  const first = value[0] ?? "";
+  return /^[bcdfghjklmnpqrstvwxyz]$/.test(first) ? first : "";
+}
+
+function getLastVowel(value: string): string {
+  return value.match(/[aeiou](?!.*[aeiou])/)?.[0] ?? "";
+}
+
+function romanizeKana(value: string): string {
+  const normalized = katakanaToHiragana(value.normalize("NFKC"));
+  const parts: string[] = [];
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    const character = normalized[index];
+
+    if (character === "っ") {
+      const nextPair = normalized.slice(index + 1, index + 3);
+      const nextSingle = normalized[index + 1] ?? "";
+      const nextRomaji = kanaDigraphs[nextPair] ?? kanaMonographs[nextSingle] ?? "";
+      const consonant = getFirstConsonant(nextRomaji);
+
+      if (consonant) {
+        parts.push(consonant);
+      }
+
+      continue;
+    }
+
+    if (character === "ー") {
+      const vowel = getLastVowel(parts.join(""));
+
+      if (vowel) {
+        parts.push(vowel);
+      }
+
+      continue;
+    }
+
+    const pair = normalized.slice(index, index + 2);
+
+    if (kanaDigraphs[pair]) {
+      parts.push(kanaDigraphs[pair]);
+      index += 1;
+      continue;
+    }
+
+    if (kanaMonographs[character]) {
+      parts.push(kanaMonographs[character]);
+      continue;
+    }
+
+    if (/[\s,.!?¿¡/()-]/.test(character)) {
+      parts.push(" ");
+      continue;
+    }
+
+    if (/[a-zA-Z0-9]/.test(character)) {
+      parts.push(character.toLowerCase());
+    }
+  }
+
+  return parts.join("").replace(/\s+/g, " ").trim();
+}
+
 export function sanitizeRomajiTranscript(value: string): string {
   return value
     .replace(/[\u3040-\u30ff\u3400-\u9fff]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function romanizeJapaneseTranscript(value: string): string {
+  let normalized = value.normalize("NFKC");
+
+  Object.entries(recognitionVariantsByRomaji)
+    .flatMap(([romaji, variants]) =>
+      variants.map((variant) => ({
+        romaji,
+        variant,
+      })),
+    )
+    .sort((left, right) => right.variant.length - left.variant.length)
+    .forEach(({ romaji, variant }) => {
+      normalized = normalized.replaceAll(variant.normalize("NFKC"), ` ${romaji} `);
+    });
+
+  return romanizeKana(normalized)
     .replace(/\s+/g, " ")
     .trim();
 }

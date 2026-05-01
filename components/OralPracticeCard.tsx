@@ -28,16 +28,16 @@ interface OralPracticeCardProps {
 
 type OralStatus = "idle" | "retry" | "success" | "fail";
 
-const statusStyles: Record<OralStatus, string> = {
-  idle: "bg-slate-100 text-slate-500 ring-slate-200",
-  retry: "bg-amber-100 text-amber-800 ring-amber-200",
-  success: "bg-green-100 text-green-800 ring-green-200",
-  fail: "bg-red-100 text-red-800 ring-red-200",
+const statusDotStyles: Record<OralStatus, string> = {
+  idle: "bg-slate-400",
+  retry: "bg-amber-400",
+  success: "bg-green-400",
+  fail: "bg-red-400",
 };
 
 const SUCCESS_ADVANCE_DELAY_MS = 650;
 const FAILED_ANSWER_REVEAL_MS = 3200;
-const waveformBars = [18, 30, 22, 42, 26, 52, 34, 46, 24, 38, 56, 28, 44, 20, 32, 48, 26, 36];
+const waveformBars = [16, 28, 20, 36, 24, 44, 30, 40, 22, 34, 46, 26, 38, 18, 30, 42];
 
 export function OralPracticeCard({
   card,
@@ -55,6 +55,7 @@ export function OralPracticeCard({
   const [speechMessage, setSpeechMessage] = useState<string | null>(null);
   const {
     alternatives,
+    audioLevel,
     confidence,
     error,
     isFinal,
@@ -70,7 +71,24 @@ export function OralPracticeCard({
   const answerContent = getSideContent(card, getAnswerSide(direction));
   const recognitionLanguage = getSpeechLanguage(answerContent.language);
   const hasSpeechResult = Boolean(rawTranscript || transcript);
-  const heardText = rawTranscript || transcript || copy.speech.receivedAudio;
+  const displayTranscript =
+    answerContent.language === "ja" ? transcript : rawTranscript || transcript;
+  const heardText = displayTranscript || (isListening ? "..." : copy.speech.idle);
+  const waveformHeights = useMemo(
+    () =>
+      waveformBars.map((baseHeight, index) => {
+        if (!isListening) {
+          return Math.max(6, Math.round(baseHeight * 0.35));
+        }
+
+        const stagger = (index % 4) * 2.5;
+        return Math.max(
+          8,
+          Math.min(48, Math.round(8 + audioLevel * (baseHeight + 28) + stagger)),
+        );
+      }),
+    [audioLevel, isListening],
+  );
   const statusCopy: Record<OralStatus, string> = {
     fail: copy.speech.answerRevealed,
     idle: copy.speech.idle,
@@ -194,35 +212,37 @@ export function OralPracticeCard({
   }
 
   return (
-    <div className="flex flex-1 flex-col justify-center gap-4">
-      <article className={`rounded-lg border p-5 shadow-soft ${getCardSurfaceClass(card)}`}>
-        <div className="mb-7 flex items-start justify-between gap-3">
-          <div>
+    <div className="flex min-h-0 flex-1 flex-col justify-start gap-2">
+      <article
+        className={`flex min-h-0 flex-1 flex-col rounded-lg border p-3 shadow-soft ${getCardSurfaceClass(card)}`}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+              <p className="truncate text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                 {card.category}
               </p>
               <CardSourceBadge card={card} />
             </div>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">
               {card.type === "word" ? copy.common.word : copy.common.phrase}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <LevelBadge label="V" level={progress.visualLevel} />
             <LevelBadge label="O" level={progress.oralLevel} />
           </div>
         </div>
 
-        <div className="space-y-5">
-          <div className="flex min-h-44 items-center justify-center rounded-lg bg-mist p-5 text-center">
-            <LanguagePrompt content={promptContent} />
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <div className="flex h-28 items-center justify-center rounded-lg bg-mist p-3 text-center">
+            <LanguagePrompt content={promptContent} size="compact" />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex gap-3">
               <button
-                className={`flex h-14 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black text-white shadow-lg transition active:scale-[0.98] ${
+                className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black text-white shadow-lg transition active:scale-[0.98] ${
                   isListening
                     ? "bg-slate-800 shadow-slate-200"
                     : "bg-emerald-600 shadow-emerald-200"
@@ -247,7 +267,7 @@ export function OralPracticeCard({
               </button>
               <button
                 aria-label={copy.speech.listen}
-                className="flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
+                className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
                 onClick={handleSpeak}
                 type="button"
               >
@@ -255,7 +275,7 @@ export function OralPracticeCard({
               </button>
               <button
                 aria-label={copy.speech.clearAttempt}
-                className="flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
+                className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98]"
                 disabled={isLocked}
                 onClick={() => {
                   setStatus("idle");
@@ -268,80 +288,70 @@ export function OralPracticeCard({
             </div>
 
             {!isSupported ? (
-              <div className="flex items-center gap-2 rounded-lg bg-amber-100 px-4 py-3 text-sm font-bold text-amber-800 ring-1 ring-amber-200">
+              <div className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 ring-1 ring-amber-200">
                 <MicOff aria-hidden="true" size={18} />
                 {copy.speech.micUnavailable}
               </div>
             ) : null}
 
             {error ? (
-              <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-100">
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 ring-1 ring-red-100">
                 {error
                   .replace("El navegador no soporta reconocimiento de voz.", copy.speech.unsupported)
                   .replace("No se pudo escuchar", copy.speech.listeningError)}
               </p>
             ) : null}
 
-            <div className={`rounded-lg px-4 py-3 text-sm font-bold ring-1 ${statusStyles[status]}`}>
-              {statusCopy[status]} {copy.speech.attempts}: {failedAttempts}/2
-            </div>
-
             {speechMessage ? (
-              <p className="rounded-lg bg-white px-4 py-3 text-sm font-bold text-slate-500 ring-1 ring-slate-200">
+              <p className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
                 {speechMessage}
               </p>
             ) : null}
 
-            {isListening || hasSpeechResult ? (
-              <div className="rounded-lg bg-slate-950 p-4 text-white shadow-soft">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        isListening ? "animate-pulse bg-red-400" : "bg-emerald-400"
-                      }`}
-                    />
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">
-                      {isListening ? copy.speech.recording : copy.speech.autoValidation}
-                    </p>
-                  </div>
-                  {confidence > 0 ? (
-                    <p className="text-xs font-black text-white/60">
-                      {Math.round(confidence * 100)}%
-                    </p>
-                  ) : null}
+            <div className="rounded-lg bg-slate-950 p-3 text-white shadow-soft">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                      isListening ? "animate-pulse bg-red-400" : statusDotStyles[status]
+                    }`}
+                  />
+                  <p className="truncate text-[0.68rem] font-black uppercase tracking-[0.14em] text-white/70">
+                    {isListening ? copy.speech.recording : statusCopy[status]}
+                  </p>
                 </div>
-
-                <div className="mt-4 flex h-14 items-center gap-1.5 overflow-hidden rounded-lg bg-white/10 px-3">
-                  {waveformBars.map((height, index) => (
-                    <span
-                      aria-hidden="true"
-                      className={`w-1.5 rounded-full bg-emerald-300 ${
-                        isListening ? "animate-pulse" : "opacity-60"
-                      }`}
-                      key={`${height}-${index}`}
-                      style={{
-                        animationDelay: `${index * 55}ms`,
-                        height,
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <p className="mt-3 min-h-11 rounded-lg bg-white/10 px-3 py-2 text-base font-black leading-7 text-white">
-                  {heardText}
+                <p className="shrink-0 text-xs font-black text-white/60">
+                  {copy.speech.attempts}: {failedAttempts}/2
+                  {confidence > 0 ? ` · ${Math.round(confidence * 100)}%` : ""}
                 </p>
               </div>
-            ) : null}
+
+              <div className="mt-3 flex h-11 items-center gap-1.5 overflow-hidden rounded-lg bg-white/10 px-3">
+                {waveformHeights.map((height, index) => (
+                  <span
+                    aria-hidden="true"
+                    className={`w-1.5 rounded-full bg-emerald-300 transition-[height,opacity] duration-75 ${
+                      isListening ? "opacity-100" : "opacity-45"
+                    }`}
+                    key={`${height}-${index}`}
+                    style={{ height }}
+                  />
+                ))}
+              </div>
+
+              <p className="mt-2 line-clamp-2 min-h-10 rounded-lg bg-white/10 px-3 py-2 text-sm font-black leading-5 text-white">
+                {heardText}
+              </p>
+            </div>
           </div>
 
           {isRevealed ? (
-            <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+            <div className="rounded-lg bg-emerald-50 p-3 ring-1 ring-emerald-100">
+              <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-emerald-700">
                 {copy.practice.answer}
               </p>
-              <div className="mt-3">
-                <LanguagePrompt content={answerContent} tone="muted" />
+              <div className="mt-2">
+                <LanguagePrompt content={answerContent} size="compact" tone="muted" />
               </div>
             </div>
           ) : null}
