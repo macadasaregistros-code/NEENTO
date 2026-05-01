@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Flame, Layers3, Trophy } from "lucide-react";
+import { ArrowLeft, BarChart3, Flame, Layers3, Info, Trophy } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { CardSourceBadge } from "@/components/CardSourceBadge";
 import { ProgressBadge } from "@/components/ProgressBadge";
@@ -20,6 +20,15 @@ const statusOrder: CardStatus[] = [
   "mastered",
   "difficult",
 ];
+
+const statusDescriptions: Record<CardStatus, string> = {
+  new: "Tarjetas que todavia no tienen repasos registrados.",
+  learning: "Tarjetas en primeras vueltas, con niveles bajos y repasos cercanos.",
+  in_progress: "Tarjetas que ya avanzaron, pero todavia necesitan consolidarse.",
+  strong: "Tarjetas con buen nivel y cada vez menos repasos cercanos.",
+  mastered: "Tarjetas dominadas, con intervalos largos antes de volver a salir.",
+  difficult: "Tarjetas con varios fallos acumulados. Conviene repasarlas con calma.",
+};
 
 function percent(value: number, total: number): number {
   if (total === 0) {
@@ -47,6 +56,7 @@ export default function StatsPage() {
   const copy = config.copy;
   const { cards, getProgress, oralDueCards, progressList, visualDueCards } =
     useStudyProgress();
+  const [expandedStatus, setExpandedStatus] = useState<CardStatus | null>(null);
   const isJju = mode === "ko_es";
   const accentClass = isJju ? "text-sky-700" : "text-emerald-700";
   const barClass = isJju ? "bg-sky-500" : "bg-emerald-500";
@@ -172,18 +182,48 @@ export default function StatsPage() {
       </section>
 
       <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-100">
-        <p className="text-sm font-black text-ink">Estado de tarjetas</p>
-        <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-black text-ink">Estado de tarjetas</p>
+          <p className="text-right text-[0.7rem] font-bold text-slate-400">
+            toca estado o numero
+          </p>
+        </div>
+        <div className="mt-4 space-y-2">
           {statusCounts.map(({ status, count }) => (
-            <div className="grid grid-cols-[7.5rem_1fr_2.5rem] items-center gap-3" key={status}>
-              <ProgressBadge status={status} />
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${barClass}`}
-                  style={{ width: `${percent(count, cards.length)}%` }}
-                />
+            <div className="rounded-lg bg-slate-50/70 p-2" key={status}>
+              <div className="grid grid-cols-[7.5rem_1fr_2.75rem] items-center gap-3">
+                <button
+                  aria-expanded={expandedStatus === status}
+                  className="flex items-center gap-1 text-left transition active:scale-[0.98]"
+                  onClick={() =>
+                    setExpandedStatus((currentStatus) =>
+                      currentStatus === status ? null : status,
+                    )
+                  }
+                  type="button"
+                >
+                  <ProgressBadge status={status} />
+                  <Info aria-hidden="true" className="shrink-0 text-slate-300" size={13} />
+                </button>
+                <div className="h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className={`h-full rounded-full ${barClass}`}
+                    style={{ width: `${percent(count, cards.length)}%` }}
+                  />
+                </div>
+                <Link
+                  aria-label={`Ver ${count} tarjetas en estado ${copy.status[status]}`}
+                  className="rounded-full bg-white px-2 py-1 text-center text-sm font-black text-slate-600 shadow-sm ring-1 ring-slate-100 transition active:scale-[0.96]"
+                  href={`/vocabulary?status=${status}`}
+                >
+                  {count}
+                </Link>
               </div>
-              <p className="text-right text-sm font-black text-slate-500">{count}</p>
+              {expandedStatus === status ? (
+                <p className="mt-2 px-1 text-xs font-semibold leading-5 text-slate-500">
+                  {statusDescriptions[status]}
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -290,9 +330,13 @@ function SourceCard({
         : "bg-amber-100 text-amber-950 ring-amber-200";
 
   return (
-    <div className={`rounded-lg p-3 text-center ring-1 ${className}`}>
+    <Link
+      aria-label={`Ver tarjetas de origen ${label}`}
+      className={`block rounded-lg p-3 text-center ring-1 transition active:scale-[0.97] ${className}`}
+      href={`/vocabulary?source=${tone}`}
+    >
       <p className="text-xl font-black">{value}</p>
       <p className="mt-1 text-xs font-black uppercase tracking-[0.12em]">{label}</p>
-    </div>
+    </Link>
   );
 }

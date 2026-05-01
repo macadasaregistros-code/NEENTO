@@ -32,6 +32,8 @@ export default function HomePage() {
   const oralButtonClass = isJju
     ? "bg-sky-600 shadow-sky-200"
     : "bg-emerald-600 shadow-emerald-200";
+  const dataSourceLabel =
+    dataSource === "supabase" ? "Datos en la nube" : "Datos en este dispositivo";
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -47,7 +49,7 @@ export default function HomePage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-500 shadow-sm ring-1 ring-slate-200">
-            {dataSource === "supabase" ? "Supabase" : "Local"}
+            {dataSourceLabel}
           </span>
           {syncError ? (
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-200">

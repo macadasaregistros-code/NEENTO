@@ -2,7 +2,8 @@
 
 import { ArrowLeft, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 
 import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBadge";
 import { LevelBadge } from "@/components/LevelBadge";
@@ -11,13 +12,54 @@ import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import { getSideContent } from "@/lib/learning";
 import { getCardStatus } from "@/lib/srs";
+import type { CardStatus, VocabularyCard } from "@/types/card";
 
 const ALL_CATEGORIES = "__all__";
+const STATUS_FILTERS: CardStatus[] = [
+  "new",
+  "learning",
+  "in_progress",
+  "strong",
+  "mastered",
+  "difficult",
+];
+const SOURCE_FILTERS = ["user", "jju", "default"] as const;
+
+type SourceFilter = (typeof SOURCE_FILTERS)[number];
+
+function isCardStatus(value: string | null): value is CardStatus {
+  return STATUS_FILTERS.includes(value as CardStatus);
+}
+
+function isSourceFilter(value: string | null): value is SourceFilter {
+  return SOURCE_FILTERS.includes(value as SourceFilter);
+}
+
+function getSourceFilter(card: VocabularyCard): SourceFilter {
+  if (!card.isStarter) {
+    return "user";
+  }
+
+  return card.starterGroup === "jju" ? "jju" : "default";
+}
 
 export default function VocabularyPage() {
+  return (
+    <Suspense fallback={<VocabularyFallback />}>
+      <VocabularyContent />
+    </Suspense>
+  );
+}
+
+function VocabularyContent() {
   const { config, mode } = useLearningMode();
   const copy = config.copy;
   const { cards, getProgress } = useStudyProgress();
+  const searchParams = useSearchParams();
+  const statusParam = searchParams.get("status");
+  const sourceParam = searchParams.get("source");
+  const statusFilter = isCardStatus(statusParam) ? statusParam : null;
+  const sourceFilter = isSourceFilter(sourceParam) ? sourceParam : null;
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
   const isJju = mode === "ko_es";
@@ -37,6 +79,7 @@ export default function VocabularyPage() {
     const normalizedQuery = query.trim().toLowerCase();
 
     return cards.filter((card) => {
+      const progress = getProgress(card);
       const matchesCategory =
         selectedCategory === ALL_CATEGORIES || card.category === selectedCategory;
       const matchesQuery =
@@ -48,12 +91,26 @@ export default function VocabularyPage() {
           card.supportReading ?? "",
           card.category,
         ].some((value) => value.toLowerCase().includes(normalizedQuery));
+      const matchesStatus =
+        !statusFilter || getCardStatus(progress) === statusFilter;
+      const matchesSource = !sourceFilter || getSourceFilter(card) === sourceFilter;
 
-      return matchesCategory && matchesQuery;
+      return matchesCategory && matchesQuery && matchesStatus && matchesSource;
     });
-  }, [cards, query, selectedCategory]);
+  }, [cards, getProgress, query, selectedCategory, sourceFilter, statusFilter]);
 
   const userCardCount = cards.filter((card) => !card.isStarter).length;
+  const sourceFilterLabel = sourceFilter
+    ? sourceFilter === "user"
+      ? copy.common.userOwned
+      : sourceFilter === "jju"
+        ? "Jju"
+        : copy.common.starter
+    : null;
+  const activeFilterLabels = [
+    statusFilter ? `Estado: ${copy.status[statusFilter]}` : null,
+    sourceFilterLabel ? `Origen: ${sourceFilterLabel}` : null,
+  ].filter(Boolean);
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -78,7 +135,7 @@ export default function VocabularyPage() {
           <div>
             <p className="text-3xl font-black text-ink">{cards.length}</p>
             <p className="text-sm font-semibold text-slate-500">
-              {copy.home.cards} · {userCardCount} {copy.common.userOwned}
+              {copy.home.cards} / {userCardCount} {copy.common.userOwned}
             </p>
           </div>
           <Link
@@ -113,6 +170,25 @@ export default function VocabularyPage() {
         ) : null}
       </label>
 
+      {activeFilterLabels.length > 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-3 shadow-sm ring-1 ring-slate-200">
+          <div className="min-w-0">
+            <p className="text-[0.7rem] font-black uppercase tracking-[0.14em] text-slate-400">
+              filtro activo
+            </p>
+            <p className="truncate text-sm font-black text-ink">
+              {activeFilterLabels.join(" / ")}
+            </p>
+          </div>
+          <Link
+            className="shrink-0 rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-500 transition active:scale-[0.97]"
+            href="/vocabulary"
+          >
+            Quitar
+          </Link>
+        </div>
+      ) : null}
+
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <CategoryButton
           active={selectedCategory === ALL_CATEGORIES}
@@ -130,7 +206,8 @@ export default function VocabularyPage() {
       </div>
 
       <section className="space-y-3">
-        {filteredCards.map((card) => {
+        {filteredCards.length > 0 ? (
+          filteredCards.map((card) => {
           const progress = getProgress(card);
           const status = getCardStatus(progress);
           const learningContent = getSideContent(card, "learning");
@@ -190,7 +267,28 @@ export default function VocabularyPage() {
               </div>
             </article>
           );
-        })}
+          })
+        ) : (
+          <p className="rounded-lg bg-white p-4 text-sm font-bold text-slate-500 shadow-sm ring-1 ring-slate-100">
+            No hay tarjetas con este filtro.
+          </p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function VocabularyFallback() {
+  return (
+    <div className="flex flex-1 flex-col gap-5">
+      <section className="rounded-lg bg-white p-4 shadow-soft">
+        <div className="h-8 w-2/3 rounded-full bg-slate-100" />
+        <div className="mt-3 h-4 w-1/2 rounded-full bg-slate-100" />
+      </section>
+      <section className="space-y-3">
+        {[0, 1, 2].map((item) => (
+          <div className="h-28 rounded-lg bg-white shadow-sm ring-1 ring-slate-100" key={item} />
+        ))}
       </section>
     </div>
   );
