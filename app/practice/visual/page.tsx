@@ -82,18 +82,19 @@ export default function VisualPracticePage() {
   }
 
   return (
-    <div className="relative flex flex-1 flex-col gap-5">
-      <header className="flex items-center justify-between gap-3 pt-2">
+    <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <header className="flex items-center justify-between gap-2">
         <DirectionToggle
-          className="max-w-[13.5rem] flex-1"
+          className="max-w-[12.5rem] flex-1"
+          variant="compact"
           value={direction}
           onChange={setDirection}
         />
         <div className="shrink-0 text-right">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-slate-400">
             {copy.visualTitle}
           </p>
-          <p className="text-sm font-bold text-slate-600">
+          <p className="text-xs font-bold text-slate-600">
             {pendingLabel}
           </p>
         </div>
@@ -101,7 +102,7 @@ export default function VisualPracticePage() {
 
       {feedback ? (
         <div
-          className={`pointer-events-none absolute inset-x-4 top-20 z-20 flex h-14 items-center justify-center gap-2 rounded-lg text-sm font-black text-white shadow-soft ${
+          className={`pointer-events-none absolute inset-x-4 top-14 z-20 flex h-12 items-center justify-center gap-2 rounded-lg text-sm font-black text-white shadow-soft ${
             feedback === "success" ? "bg-green-600" : "bg-red-600"
           }`}
         >

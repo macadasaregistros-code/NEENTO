@@ -31,11 +31,13 @@ interface BrowserSpeechRecognition {
 }
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+type BrowserAudioContextConstructor = new () => AudioContext;
 
 declare global {
   interface Window {
     SpeechRecognition?: BrowserSpeechRecognitionConstructor;
     webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitAudioContext?: BrowserAudioContextConstructor;
   }
 }
 
@@ -45,6 +47,14 @@ function getSpeechRecognitionConstructor() {
   }
 
   return window.SpeechRecognition ?? window.webkitSpeechRecognition;
+}
+
+function getAudioContextConstructor() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  return window.AudioContext ?? window.webkitAudioContext;
 }
 
 export function useSpeechRecognition() {
@@ -88,7 +98,14 @@ export function useSpeechRecognition() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new AudioContext();
+      const AudioContextConstructor = getAudioContextConstructor();
+
+      if (!AudioContextConstructor) {
+        mediaStreamRef.current = stream;
+        return;
+      }
+
+      const audioContext = new AudioContextConstructor();
       const analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaStreamSource(stream);
 

@@ -97,10 +97,10 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
   }
 
   return (
-    <div className="flex flex-1 flex-col justify-center gap-4">
+    <div className="flex min-h-0 flex-1 flex-col justify-center gap-2">
       <motion.article
         animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-        className={`touch-none select-none rounded-lg border p-5 shadow-soft ${getCardSurfaceClass(card)}`}
+        className={`flex min-h-0 flex-1 touch-none select-none flex-col rounded-lg border p-3 shadow-soft ${getCardSurfaceClass(card)}`}
         drag
         dragConstraints={{ bottom: 0, left: 0, right: 0, top: 0 }}
         dragElastic={0.18}
@@ -108,62 +108,64 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
         onDragEnd={handleDragEnd}
         whileDrag={{ scale: 1.02 }}
       >
-        <div className="mb-7 flex items-start justify-between gap-3">
-          <div>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+              <p className="truncate text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                 {card.category}
               </p>
               <CardSourceBadge card={card} />
             </div>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">
               {card.type === "word" ? copy.common.word : copy.common.phrase}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <LevelBadge label="V" level={progress.visualLevel} />
             <LevelBadge label="O" level={progress.oralLevel} />
           </div>
         </div>
 
-        {card.imageUrl ? (
-          <div
-            aria-hidden="true"
-            className="mb-7 h-36 w-full rounded-lg bg-mist bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url("${card.imageUrl}")`,
-              backgroundSize: "contain",
-            }}
-          />
-        ) : (
-          <div className="mb-7 flex h-32 items-center justify-center rounded-lg bg-mist">
-            <span className="text-4xl font-black text-slate-300">
-              {card.learningText.slice(0, 2).toUpperCase()}
-            </span>
-          </div>
-        )}
-
-        <div className="min-h-48 space-y-5">
-          <LanguagePrompt content={firstContent} />
-          {renderListenButton(firstContent)}
-
-          {isRevealed ? (
-            <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-                {copy.practice.answer}
-              </p>
-              <div className="mt-3">
-                <LanguagePrompt content={answerContent} tone="muted" />
-              </div>
-              <div className="mt-4">{renderListenButton(answerContent)}</div>
+        {isRevealed ? (
+          <div className="flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-emerald-50 p-4 text-center ring-1 ring-emerald-100">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-emerald-700">
+              {copy.practice.answer}
+            </p>
+            <div className="mt-5">
+              <LanguagePrompt content={answerContent} size="fit" tone="muted" />
             </div>
-          ) : (
-            <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-3 text-sm font-bold text-slate-500">
+            <div className="mt-5">{renderListenButton(answerContent)}</div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            {card.imageUrl ? (
+              <div
+                aria-hidden="true"
+                className="mb-4 h-28 w-full shrink-0 rounded-lg bg-mist bg-center bg-no-repeat"
+                style={{
+                  backgroundImage: `url("${card.imageUrl}")`,
+                  backgroundSize: "contain",
+                }}
+              />
+            ) : (
+              <div className="mb-4 flex h-24 shrink-0 items-center justify-center rounded-lg bg-mist">
+                <span className="text-4xl font-black text-slate-300">
+                  {card.learningText.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+            )}
+
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4">
+              <LanguagePrompt content={firstContent} size="fit" />
+              {renderListenButton(firstContent)}
+            </div>
+
+            <div className="mt-4 flex shrink-0 items-center gap-2 rounded-full bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-500">
               <ArrowUp aria-hidden="true" size={18} />
               {copy.practice.revealHint}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </motion.article>
     </div>
   );

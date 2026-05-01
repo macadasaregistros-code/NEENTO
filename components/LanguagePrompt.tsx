@@ -2,7 +2,7 @@ import type { SideContent } from "@/lib/learning";
 
 interface LanguagePromptProps {
   content: SideContent;
-  size?: "normal" | "compact";
+  size?: "normal" | "compact" | "fit";
   tone?: "primary" | "muted";
 }
 
@@ -19,7 +19,15 @@ export function LanguagePrompt({
     tone === "primary" ? "text-slate-400" : "text-emerald-700/70";
   const textClass = tone === "primary" ? "text-ink" : "text-emerald-950";
   const textSizeClass =
-    size === "compact"
+    size === "fit"
+      ? content.text.length > 42
+        ? "text-2xl"
+        : content.text.length > 24
+          ? "text-3xl"
+          : content.text.length > 12
+            ? "text-4xl"
+            : "text-5xl"
+      : size === "compact"
       ? content.text.length > 24
         ? "text-2xl"
         : content.text.length > 12
@@ -30,7 +38,8 @@ export function LanguagePrompt({
         : content.text.length > 12
           ? "text-5xl"
           : "text-6xl";
-  const readingSizeClass = size === "compact" ? "text-lg" : "text-2xl";
+  const readingSizeClass =
+    size === "fit" ? "text-base" : size === "compact" ? "text-lg" : "text-2xl";
 
   return (
     <div className="space-y-1.5 text-center">
