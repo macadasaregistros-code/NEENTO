@@ -491,5 +491,5 @@ export function getSpeechLanguage(language: LanguageCode): string {
     return "ko-KR";
   }
 
-  return "es-ES";
+  return "es-US";
 }

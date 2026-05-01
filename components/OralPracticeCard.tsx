@@ -274,12 +274,14 @@ export function OralPracticeCard({
     }
   }
 
-  function handleSpeak() {
+  async function handleSpeak() {
     const expectedSpeech = getExpectedSpeech(card, direction);
-    const didSpeak = speakText(expectedSpeech.text, expectedSpeech.lang);
 
     triggerHaptic("light");
-    setSpeechMessage(didSpeak ? copy.speech.listen : copy.speech.voiceUnavailable);
+    const speechResult = await speakText(expectedSpeech.text, expectedSpeech.lang);
+    setSpeechMessage(
+      speechResult === "spoken" ? copy.speech.listen : copy.speech.voiceUnavailable,
+    );
   }
 
   return (

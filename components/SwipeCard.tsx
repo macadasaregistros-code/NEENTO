@@ -82,7 +82,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
     const speech = getSpeechPayload(content);
 
     triggerHaptic("light");
-    speakText(speech.text, speech.lang);
+    void speakText(speech.text, speech.lang);
   }
 
   function renderListenButton(content: SideContent) {
@@ -139,7 +139,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
               <LanguagePrompt content={answerContent} size="fit" tone="muted" />
             </div>
             <div className="mt-5">{renderListenButton(answerContent)}</div>
-            <div className="mt-5 flex items-center justify-center gap-2 rounded-full bg-white/70 px-4 py-2 text-xs font-black text-emerald-700">
+            <div className="mt-5 flex items-center justify-center gap-2 px-2 py-1 text-xs font-black uppercase tracking-[0.14em] text-emerald-700/70">
               <ArrowDown aria-hidden="true" size={16} />
               <span>volver</span>
             </div>
@@ -168,7 +168,7 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
               {renderListenButton(firstContent)}
             </div>
 
-            <div className="mt-4 flex shrink-0 items-center gap-2 rounded-full bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-500">
+            <div className="mt-4 flex shrink-0 items-center justify-center gap-2 px-2 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
               <ArrowUp aria-hidden="true" size={18} />
               {copy.practice.revealHint}
             </div>
