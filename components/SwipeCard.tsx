@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowUp, Volume2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBadge";
@@ -53,12 +53,19 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
     const x = info.offset.x;
     const y = info.offset.y;
     const isVerticalReveal = y < -80 && Math.abs(y) > Math.abs(x);
+    const isVerticalHide = y > 80 && Math.abs(y) > Math.abs(x);
     const isRightSuccess = x > 90 && Math.abs(x) > Math.abs(y);
     const isLeftFail = x < -90 && Math.abs(x) > Math.abs(y);
 
-    if (isVerticalReveal) {
+    if (isVerticalReveal && !isRevealed) {
       triggerHaptic("light");
       setIsRevealed(true);
+      return;
+    }
+
+    if (isVerticalHide && isRevealed) {
+      triggerHaptic("light");
+      setIsRevealed(false);
       return;
     }
 
@@ -74,14 +81,10 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
 
   function handleSpeak(content: SideContent) {
     triggerHaptic("light");
-    speakText(content.reading ?? content.text, getSpeechLanguage(content.language));
+    speakText(content.text || content.reading || "", getSpeechLanguage(content.language));
   }
 
   function renderListenButton(content: SideContent) {
-    if (content.language !== "ja") {
-      return null;
-    }
-
     return (
       <button
         aria-label={copy.speech.listen}
@@ -135,6 +138,10 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
               <LanguagePrompt content={answerContent} size="fit" tone="muted" />
             </div>
             <div className="mt-5">{renderListenButton(answerContent)}</div>
+            <div className="mt-5 flex items-center justify-center gap-2 rounded-full bg-white/70 px-4 py-2 text-xs font-black text-emerald-700">
+              <ArrowDown aria-hidden="true" size={16} />
+              <span>volver</span>
+            </div>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">

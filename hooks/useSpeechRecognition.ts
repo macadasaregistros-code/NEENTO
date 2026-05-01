@@ -148,7 +148,12 @@ export function useSpeechRecognition() {
   }, [stopAudioMeter]);
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      recognitionRef.current?.abort();
+    }
+
     stopAudioMeter();
     setIsListening(false);
   }, [stopAudioMeter]);
@@ -162,12 +167,16 @@ export function useSpeechRecognition() {
       return;
     }
 
-    recognitionRef.current?.abort();
+    try {
+      recognitionRef.current?.abort();
+    } catch {
+      // Ignore stale recognition instances.
+    }
 
     const recognition = new SpeechRecognitionConstructor();
 
     recognition.lang = lang;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 5;
     recognition.onstart = () => {
@@ -214,7 +223,14 @@ export function useSpeechRecognition() {
     setAlternatives([]);
     setConfidence(0);
     setIsFinal(false);
-    recognition.start();
+
+    try {
+      recognition.start();
+    } catch {
+      setError("No se pudo iniciar el microfono.");
+      setIsListening(false);
+      stopAudioMeter();
+    }
   }, [startAudioMeter, stopAudioMeter]);
 
   const resetTranscript = useCallback(() => {
