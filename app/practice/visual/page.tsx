@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -83,15 +83,13 @@ export default function VisualPracticePage() {
 
   return (
     <div className="relative flex flex-1 flex-col gap-5">
-      <header className="flex items-center justify-between pt-2">
-        <Link
-          aria-label="Volver a Home"
-          className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-ink shadow-sm ring-1 ring-slate-200"
-          href="/"
-        >
-          <ArrowLeft aria-hidden="true" size={21} />
-        </Link>
-        <div className="text-right">
+      <header className="flex items-center justify-between gap-3 pt-2">
+        <DirectionToggle
+          className="max-w-[13.5rem] flex-1"
+          value={direction}
+          onChange={setDirection}
+        />
+        <div className="shrink-0 text-right">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
             {copy.visualTitle}
           </p>
@@ -100,8 +98,6 @@ export default function VisualPracticePage() {
           </p>
         </div>
       </header>
-
-      <DirectionToggle value={direction} onChange={setDirection} />
 
       {feedback ? (
         <div

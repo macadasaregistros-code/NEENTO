@@ -7,11 +7,16 @@ import { triggerHaptic } from "@/lib/haptics";
 import type { PracticeDirection } from "@/types/card";
 
 interface DirectionToggleProps {
+  className?: string;
   value: PracticeDirection;
   onChange: (value: PracticeDirection) => void;
 }
 
-export function DirectionToggle({ value, onChange }: DirectionToggleProps) {
+export function DirectionToggle({
+  className = "",
+  value,
+  onChange,
+}: DirectionToggleProps) {
   const { config, mode } = useLearningMode();
   const copy = config.copy.practice;
   const nextValue: PracticeDirection =
@@ -23,22 +28,22 @@ export function DirectionToggle({ value, onChange }: DirectionToggleProps) {
 
   return (
     <button
-      className={`flex min-h-14 items-center justify-between rounded-full px-4 py-2 text-left shadow-sm ring-1 transition active:scale-[0.98] ${accentClass}`}
+      className={`flex min-h-14 min-w-0 items-center justify-between rounded-full px-4 py-2 text-left shadow-sm ring-1 transition active:scale-[0.98] ${accentClass} ${className}`}
       onClick={() => {
         triggerHaptic("light");
         onChange(nextValue);
       }}
       type="button"
     >
-      <span>
+      <span className="min-w-0 pr-2">
         <span className="block text-[0.66rem] font-black uppercase tracking-[0.16em] opacity-60">
           {copy.direction}
         </span>
-        <span className="block text-sm font-black">
+        <span className="block truncate text-sm font-black">
           {config.copy.directions[value]}
         </span>
       </span>
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm">
         <ArrowLeftRight aria-hidden="true" size={18} />
       </span>
     </button>
