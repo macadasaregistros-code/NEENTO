@@ -11,44 +11,36 @@ interface DirectionToggleProps {
   onChange: (value: PracticeDirection) => void;
 }
 
-const options: PracticeDirection[] = [
-  "learning_to_support",
-  "support_to_learning",
-];
-
 export function DirectionToggle({ value, onChange }: DirectionToggleProps) {
-  const { config } = useLearningMode();
+  const { config, mode } = useLearningMode();
   const copy = config.copy.practice;
+  const nextValue: PracticeDirection =
+    value === "learning_to_support" ? "support_to_learning" : "learning_to_support";
+  const accentClass =
+    mode === "ko_es"
+      ? "bg-sky-50 text-sky-900 ring-sky-100"
+      : "bg-emerald-50 text-emerald-900 ring-emerald-100";
 
   return (
-    <div className="rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-200">
-      <div className="mb-1 flex items-center gap-2 px-2 pt-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-slate-400">
-        <ArrowLeftRight aria-hidden="true" size={14} />
-        {copy.direction}
-      </div>
-      <div className="grid grid-cols-2 gap-1">
-        {options.map((option) => {
-          const isActive = option === value;
-
-          return (
-            <button
-              className={`h-10 rounded-lg px-2 text-[0.72rem] font-black transition ${
-                isActive
-                  ? "bg-ink text-white"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-              key={option}
-              onClick={() => {
-                triggerHaptic("light");
-                onChange(option);
-              }}
-              type="button"
-            >
-              {config.copy.directions[option]}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <button
+      className={`flex min-h-14 items-center justify-between rounded-full px-4 py-2 text-left shadow-sm ring-1 transition active:scale-[0.98] ${accentClass}`}
+      onClick={() => {
+        triggerHaptic("light");
+        onChange(nextValue);
+      }}
+      type="button"
+    >
+      <span>
+        <span className="block text-[0.66rem] font-black uppercase tracking-[0.16em] opacity-60">
+          {copy.direction}
+        </span>
+        <span className="block text-sm font-black">
+          {config.copy.directions[value]}
+        </span>
+      </span>
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm">
+        <ArrowLeftRight aria-hidden="true" size={18} />
+      </span>
+    </button>
   );
 }

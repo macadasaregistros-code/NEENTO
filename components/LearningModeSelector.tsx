@@ -12,8 +12,8 @@ export function LearningModeSelector() {
   const { config, mode, setMode } = useLearningMode();
 
   return (
-    <div className="mb-3 rounded-lg bg-white/90 p-1 shadow-sm ring-1 ring-slate-200">
-      <div className="mb-1 flex items-center gap-2 px-2 pt-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-slate-400">
+    <div className="rounded-lg bg-white/85 p-2 shadow-sm ring-1 ring-white/80 backdrop-blur">
+      <div className="mb-2 flex items-center gap-2 px-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-slate-400">
         <Languages aria-hidden="true" size={14} />
         {config.appLanguage === "ko" ? "모드" : "Modo"}
       </div>
@@ -21,13 +21,15 @@ export function LearningModeSelector() {
         {modes.map((item) => {
           const isActive = item === mode;
           const itemConfig = modeConfigs[item];
+          const activeClass =
+            item === "ko_es"
+              ? "bg-sky-600 text-white shadow-sm shadow-sky-100"
+              : "bg-emerald-600 text-white shadow-sm shadow-emerald-100";
 
           return (
             <button
-              className={`min-h-12 rounded-lg px-2 py-2 text-xs font-black leading-tight transition ${
-                isActive
-                  ? "bg-ink text-white"
-                  : "text-slate-500 hover:bg-slate-100"
+              className={`min-h-11 rounded-lg px-3 py-2 text-left text-xs font-black leading-tight transition active:scale-[0.98] ${
+                isActive ? activeClass : "bg-slate-50 text-slate-500 hover:bg-white"
               }`}
               key={item}
               onClick={() => setMode(item)}

@@ -14,10 +14,11 @@ export function CardSourceBadge({ card }: CardSourceBadgeProps) {
     : card.starterGroup === "jju"
       ? "Jju"
       : config.copy.common.starter;
-  const className =
-    card.starterGroup === "jju"
-      ? "bg-amber-100 text-amber-900 ring-amber-200"
-      : "bg-slate-100 text-slate-500 ring-slate-200";
+  const className = !card.isStarter
+    ? "bg-emerald-100 text-emerald-900 ring-emerald-200"
+    : card.starterGroup === "jju"
+      ? "bg-sky-100 text-sky-900 ring-sky-200"
+      : "bg-amber-200 text-amber-950 ring-amber-300";
 
   return (
     <span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${className}`}>
@@ -26,8 +27,16 @@ export function CardSourceBadge({ card }: CardSourceBadgeProps) {
   );
 }
 
-export function getCardSurfaceClass(card: Pick<VocabularyCard, "starterGroup">): string {
-  return card.starterGroup === "jju"
-    ? "border-amber-200 bg-amber-50/80 shadow-amber-100"
-    : "border-white bg-white";
+export function getCardSurfaceClass(
+  card: Pick<VocabularyCard, "isStarter" | "starterGroup">,
+): string {
+  if (!card.isStarter) {
+    return "border-emerald-200 bg-emerald-50/85 shadow-emerald-100";
+  }
+
+  if (card.starterGroup === "jju") {
+    return "border-sky-200 bg-gradient-to-b from-sky-50 via-white to-sky-100/70 shadow-sky-100";
+  }
+
+  return "border-amber-300 bg-amber-50/90 shadow-amber-100";
 }

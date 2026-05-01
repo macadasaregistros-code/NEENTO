@@ -16,7 +16,8 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { config } = useLearningMode();
+  const { config, mode } = useLearningMode();
+  const activeClass = mode === "ko_es" ? "bg-sky-600 text-white" : "bg-emerald-600 text-white";
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -31,7 +32,7 @@ export function BottomNav() {
               aria-current={isActive ? "page" : undefined}
               className={`flex h-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-semibold transition ${
                 isActive
-                  ? "bg-ink text-white"
+                  ? activeClass
                   : "text-slate-500 hover:bg-slate-100 hover:text-ink"
               }`}
               href={item.href}

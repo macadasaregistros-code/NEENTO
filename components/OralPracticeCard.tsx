@@ -37,6 +37,7 @@ const statusStyles: Record<OralStatus, string> = {
 
 const SUCCESS_ADVANCE_DELAY_MS = 650;
 const FAILED_ANSWER_REVEAL_MS = 3200;
+const waveformBars = [18, 30, 22, 42, 26, 52, 34, 46, 24, 38, 56, 28, 44, 20, 32, 48, 26, 36];
 
 export function OralPracticeCard({
   card,
@@ -69,6 +70,7 @@ export function OralPracticeCard({
   const answerContent = getSideContent(card, getAnswerSide(direction));
   const recognitionLanguage = getSpeechLanguage(answerContent.language);
   const hasSpeechResult = Boolean(rawTranscript || transcript);
+  const heardText = rawTranscript || transcript || copy.speech.receivedAudio;
   const statusCopy: Record<OralStatus, string> = {
     fail: copy.speech.answerRevealed,
     idle: copy.speech.idle,
@@ -290,19 +292,45 @@ export function OralPracticeCard({
               </p>
             ) : null}
 
-            {hasSpeechResult ? (
-              <div className="rounded-lg bg-white p-4 ring-1 ring-slate-200">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                  {copy.speech.autoValidation}
+            {isListening || hasSpeechResult ? (
+              <div className="rounded-lg bg-slate-950 p-4 text-white shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        isListening ? "animate-pulse bg-red-400" : "bg-emerald-400"
+                      }`}
+                    />
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">
+                      {isListening ? copy.speech.recording : copy.speech.autoValidation}
+                    </p>
+                  </div>
+                  {confidence > 0 ? (
+                    <p className="text-xs font-black text-white/60">
+                      {Math.round(confidence * 100)}%
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex h-14 items-center gap-1.5 overflow-hidden rounded-lg bg-white/10 px-3">
+                  {waveformBars.map((height, index) => (
+                    <span
+                      aria-hidden="true"
+                      className={`w-1.5 rounded-full bg-emerald-300 ${
+                        isListening ? "animate-pulse" : "opacity-60"
+                      }`}
+                      key={`${height}-${index}`}
+                      style={{
+                        animationDelay: `${index * 55}ms`,
+                        height,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <p className="mt-3 min-h-11 rounded-lg bg-white/10 px-3 py-2 text-base font-black leading-7 text-white">
+                  {heardText}
                 </p>
-                <p className="mt-2 text-xl font-black text-ink">
-                  {transcript || rawTranscript || copy.speech.receivedAudio}
-                </p>
-                {confidence > 0 ? (
-                  <p className="mt-2 text-xs font-bold text-slate-400">
-                    {copy.speech.confidence}: {Math.round(confidence * 100)}%
-                  </p>
-                ) : null}
               </div>
             ) : null}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowLeft, ArrowRight, ArrowUp, Volume2 } from "lucide-react";
+import { ArrowUp, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBadge";
@@ -165,21 +165,6 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
           )}
         </div>
       </motion.article>
-
-      <div className="grid grid-cols-3 gap-2 rounded-lg bg-white/80 p-2 text-center text-[0.7rem] font-black uppercase tracking-[0.12em] text-slate-500 ring-1 ring-white">
-        <div className="flex items-center justify-center gap-1">
-          <ArrowLeft aria-hidden="true" size={15} />
-          {copy.common.fail}
-        </div>
-        <div className="flex items-center justify-center gap-1">
-          <ArrowUp aria-hidden="true" size={15} />
-          {copy.practice.revealLabel}
-        </div>
-        <div className="flex items-center justify-center gap-1">
-          <ArrowRight aria-hidden="true" size={15} />
-          {copy.common.success}
-        </div>
-      </div>
     </div>
   );
 }

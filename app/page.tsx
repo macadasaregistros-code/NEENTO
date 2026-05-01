@@ -3,11 +3,12 @@
 import { BarChart3, BookOpen, Eye, Mic, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
+import { LearningModeSelector } from "@/components/LearningModeSelector";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 
 export default function HomePage() {
-  const { config } = useLearningMode();
+  const { config, mode } = useLearningMode();
   const copy = config.copy.home;
   const {
     cards,
@@ -26,11 +27,16 @@ export default function HomePage() {
         progress.oralFailCount >
       0,
   ).length;
+  const isJju = mode === "ko_es";
+  const accentTextClass = isJju ? "text-sky-700" : "text-emerald-700";
+  const oralButtonClass = isJju
+    ? "bg-sky-600 shadow-sky-200"
+    : "bg-emerald-600 shadow-emerald-200";
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <header className="pt-4">
-        <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">
+        <p className={`text-sm font-black uppercase tracking-[0.18em] ${accentTextClass}`}>
           {copy.titleKicker}
         </p>
         <h1 className="mt-2 text-5xl font-black leading-none tracking-normal text-ink">
@@ -50,6 +56,8 @@ export default function HomePage() {
           ) : null}
         </div>
       </header>
+
+      <LearningModeSelector />
 
       <section className="rounded-lg bg-white p-5 shadow-soft">
         <p className="text-sm font-bold text-slate-500">{copy.pendingToday}</p>
@@ -107,7 +115,7 @@ export default function HomePage() {
         </Link>
 
         <Link
-          className="flex h-16 items-center justify-between rounded-lg bg-emerald-600 px-5 text-base font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.99]"
+          className={`flex h-16 items-center justify-between rounded-lg px-5 text-base font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
           href="/practice/oral"
         >
           <span className="flex items-center gap-3">
@@ -125,14 +133,13 @@ export default function HomePage() {
           {copy.vocabulary}
         </Link>
 
-        <button
-          className="flex h-16 w-full items-center gap-3 rounded-lg bg-white/70 px-5 text-base font-black text-slate-400 ring-1 ring-slate-200"
-          disabled
-          type="button"
+        <Link
+          className="flex h-16 items-center gap-3 rounded-lg bg-white px-5 text-base font-black text-ink shadow-sm ring-1 ring-slate-200 transition active:scale-[0.99]"
+          href="/stats"
         >
           <BarChart3 aria-hidden="true" size={22} />
           {copy.stats}
-        </button>
+        </Link>
 
         <button
           className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-slate-500 transition hover:bg-white/60"

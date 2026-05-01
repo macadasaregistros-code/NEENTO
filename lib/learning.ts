@@ -103,6 +103,7 @@ interface ModeCopy {
     listeningError: string;
     micUnavailable: string;
     receivedAudio: string;
+    recording: string;
     retry: string;
     speak: string;
     stop: string;
@@ -155,8 +156,8 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
     appLanguage: "es",
     defaultOralDirection: "support_to_learning",
     defaultVisualDirection: "learning_to_support",
-    label: "Aprender japonés desde español",
-    shortLabel: "JA / ES",
+    label: "Daiki",
+    shortLabel: "Daiki",
     learningLanguage: "ja",
     supportLanguage: "es",
     copy: {
@@ -205,21 +206,21 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         word: "palabra",
       },
       directions: {
-        learning_to_support: "JA -> ES",
-        support_to_learning: "ES -> JA",
+        learning_to_support: "Daiki -> Español",
+        support_to_learning: "Español -> Daiki",
       },
       home: {
         cards: "tarjetas",
         description:
           "Practica palabras y frases utiles con sesiones cortas para movil.",
-        modeLabel: "Romaji SRS",
+        modeLabel: "Daiki",
         oral: "oral",
         pendingToday: "Pendientes hoy",
         progressed: "con avance",
         readyReviews: "repasos listos",
         resetProgress: "Reiniciar progreso local",
         stats: "Estadisticas",
-        titleKicker: "Romaji SRS",
+        titleKicker: "Daiki",
         visual: "visual",
         vocabulary: "Vocabulario",
       },
@@ -257,6 +258,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         listeningError: "No se pudo escuchar",
         micUnavailable: "Microfono no disponible en este navegador.",
         receivedAudio: "Audio recibido",
+        recording: "Grabando",
         retry: "No coincidio. Intenta una vez mas.",
         speak: "Grabar",
         stop: "Detener",
@@ -304,8 +306,8 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
     appLanguage: "ko",
     defaultOralDirection: "support_to_learning",
     defaultVisualDirection: "support_to_learning",
-    label: "한국어로 스페인어 배우기",
-    shortLabel: "KO / ES",
+    label: "Jju",
+    shortLabel: "Jju",
     learningLanguage: "es",
     supportLanguage: "ko",
     copy: {
@@ -354,21 +356,21 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         word: "단어",
       },
       directions: {
-        learning_to_support: "ES -> KO",
-        support_to_learning: "KO -> ES",
+        learning_to_support: "Español -> Jju",
+        support_to_learning: "Jju -> Español",
       },
       home: {
         cards: "카드",
         description:
-          "스페인어 단어와 문장을 짧은 모바일 연습으로 익히세요.",
-        modeLabel: "한국어 사용자용",
+          "스페인어 단어와 문장을 짧은 모바일 연습으로 익히세요. con amor, Daiki",
+        modeLabel: "Jju",
         oral: "말하기",
         pendingToday: "오늘 복습",
         progressed: "진행 있음",
         readyReviews: "복습 대기",
         resetProgress: "로컬 진행 초기화",
         stats: "통계",
-        titleKicker: "스페인어 SRS",
+        titleKicker: "Jju",
         visual: "시각",
         vocabulary: "단어장",
       },
@@ -406,6 +408,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
         listeningError: "음성을 들을 수 없습니다",
         micUnavailable: "이 브라우저에서는 마이크를 사용할 수 없습니다.",
         receivedAudio: "음성 수신됨",
+        recording: "녹음 중",
         retry: "일치하지 않습니다. 한 번 더 시도하세요.",
         speak: "녹음",
         stop: "중지",
