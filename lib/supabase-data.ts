@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { getJapaneseRecognitionVariants } from "@/lib/japanese-recognition";
+import { romajiToHiragana } from "@/lib/speech";
 import { createInitialProgress, normalizeProgress } from "@/lib/srs";
 import type {
   CardProgress,
@@ -26,6 +28,7 @@ interface CardRow {
   support_reading?: string | null;
   japanese_romaji: string;
   japanese_kana?: string | null;
+  speech_variants?: string[] | null;
   spanish: string;
   category: string;
   image_url: string | null;
@@ -73,13 +76,29 @@ function getLegacySupportLanguage(mode: LearningMode): LanguageCode {
 
 function toVocabularyCard(row: CardRow): VocabularyCard {
   const learningMode = getLegacyMode(row);
+  const legacyRomaji = row.learning_reading ?? row.japanese_romaji;
+  const generatedKana =
+    learningMode === "ja_es" ? romajiToHiragana(legacyRomaji ?? row.learning_text ?? "") : "";
+  const japaneseKana =
+    learningMode === "ja_es" ? row.japanese_kana ?? generatedKana : row.japanese_kana ?? "";
+  const rowLearningText = row.learning_text ?? undefined;
   const learningText =
-    row.learning_text ??
-    (learningMode === "ja_es" ? row.japanese_kana ?? row.japanese_romaji : row.japanese_romaji);
+    learningMode === "ja_es"
+      ? japaneseKana ||
+        (rowLearningText && rowLearningText !== legacyRomaji ? rowLearningText : legacyRomaji)
+      : rowLearningText ?? row.japanese_romaji;
   const learningReading =
     row.learning_reading ??
-    (learningMode === "ja_es" ? row.japanese_romaji : undefined);
+    (learningMode === "ja_es" ? legacyRomaji : undefined);
   const supportText = row.support_text ?? row.spanish;
+  const speechVariants =
+    learningMode === "ja_es"
+      ? getJapaneseRecognitionVariants(
+          learningReading ?? learningText,
+          japaneseKana || undefined,
+          row.speech_variants ?? [],
+        )
+      : undefined;
 
   return {
     id: row.id,
@@ -96,11 +115,12 @@ function toVocabularyCard(row: CardRow): VocabularyCard {
     supportText,
     supportReading: row.support_reading ?? undefined,
     japaneseRomaji: row.japanese_romaji,
-    japaneseKana: row.japanese_kana ?? undefined,
+    japaneseKana: japaneseKana || undefined,
     spanish: row.spanish,
     category: row.category,
     imageUrl: row.image_url ?? undefined,
     audioUrl: row.audio_url ?? undefined,
+    speechVariants,
     createdAt: row.created_at,
   };
 }

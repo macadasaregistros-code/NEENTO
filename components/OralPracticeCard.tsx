@@ -101,12 +101,13 @@ export function OralPracticeCard({
   const isRecordingActive = isPressing || isListening;
   const displayedTranscript =
     answerContent.language === "ja"
-      ? getJapaneseDisplayTranscript(
-          rawTranscript,
-          transcript,
-          alternatives,
-          answerContent.reading ?? answerContent.text,
-        )
+        ? getJapaneseDisplayTranscript(
+            rawTranscript,
+            transcript,
+            alternatives,
+            answerContent.reading ?? answerContent.text,
+            card.speechVariants,
+          )
       : rawTranscript || transcript;
   const heardText =
     displayedTranscript ||
@@ -185,6 +186,7 @@ export function OralPracticeCard({
         rawTranscript,
         transcript,
         alternatives,
+        card.speechVariants,
       );
     }
 
@@ -200,9 +202,34 @@ export function OralPracticeCard({
     answerContent.language,
     answerContent.reading,
     answerContent.text,
+    card.speechVariants,
     rawTranscript,
     transcript,
   ]);
+  const debugAlternatives = useMemo(
+    () =>
+      alternatives
+        .map((item) =>
+          answerContent.language === "ja"
+            ? getJapaneseDisplayTranscript(
+                item.transcript,
+                "",
+                [],
+                answerContent.reading ?? answerContent.text,
+                card.speechVariants,
+              )
+            : item.transcript,
+        )
+        .filter(Boolean)
+        .slice(0, 3),
+    [
+      alternatives,
+      answerContent.language,
+      answerContent.reading,
+      answerContent.text,
+      card.speechVariants,
+    ],
+  );
 
   useEffect(() => {
     if (reviewTimeoutRef.current) {
@@ -582,6 +609,24 @@ export function OralPracticeCard({
               <p className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
                 {speechMessage}
               </p>
+            ) : null}
+
+            {answerContent.language === "ja" && hasSpeechResult ? (
+              <details className="rounded-lg bg-white/80 px-3 py-2 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
+                <summary className="cursor-pointer list-none text-[0.68rem] font-black uppercase tracking-[0.13em] text-slate-400">
+                  Diagnostico de voz
+                </summary>
+                <div className="mt-2 space-y-1 leading-5">
+                  <p>Romaji escuchado: {displayedTranscript || "sin romaji claro"}</p>
+                  <p>
+                    Alternativas:{" "}
+                    {debugAlternatives.length > 0
+                      ? debugAlternatives.join(" / ")
+                      : "sin alternativas claras"}
+                  </p>
+                  <p>Confianza: {confidence > 0 ? `${Math.round(confidence * 100)}%` : "n/a"}</p>
+                </div>
+              </details>
             ) : null}
           </div>
 

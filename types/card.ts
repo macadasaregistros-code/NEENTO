@@ -40,6 +40,7 @@ export interface VocabularyCard {
   category: string;
   imageUrl?: string;
   audioUrl?: string;
+  speechVariants?: string[];
   createdAt: string;
 }
 

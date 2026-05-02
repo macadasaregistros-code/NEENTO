@@ -16,6 +16,7 @@ create table if not exists public.cards (
   support_reading text,
   japanese_romaji text not null,
   japanese_kana text,
+  speech_variants text[],
   spanish text not null,
   category text not null,
   image_url text,
@@ -37,6 +38,9 @@ alter table public.cards
 
 alter table public.cards
   add column if not exists japanese_kana text;
+
+alter table public.cards
+  add column if not exists speech_variants text[];
 
 alter table public.cards
   add column if not exists learning_mode text;

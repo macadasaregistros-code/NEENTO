@@ -1,4 +1,7 @@
-import { romajiToHiragana } from "@/lib/speech";
+import {
+  getJapaneseRecognitionVariants,
+  getRecognitionVariantEntries,
+} from "@/lib/japanese-recognition";
 
 export type OralMatch = "match" | "partial" | "miss";
 
@@ -6,31 +9,6 @@ export interface SpeechAlternative {
   transcript: string;
   confidence: number;
 }
-
-const recognitionVariantsByRomaji: Record<string, string[]> = {
-  mizu: ["\u6c34", "\u307f\u305a"],
-  inu: ["\u72ac", "\u3044\u306c"],
-  neko: ["\u732b", "\u306d\u3053"],
-  arigatou: ["\u3042\u308a\u304c\u3068\u3046", "\u6709\u96e3\u3046"],
-  sumimasen: ["\u3059\u307f\u307e\u305b\u3093", "\u6e08\u307f\u307e\u305b\u3093"],
-  konnichiwa: ["\u3053\u3093\u306b\u3061\u306f"],
-  ohayou: ["\u304a\u306f\u3088\u3046", "\u304a\u65e9\u3046"],
-  "watashi wa david desu": [
-    "\u79c1\u306fDavid\u3067\u3059",
-    "\u308f\u305f\u3057\u306fDavid\u3067\u3059",
-    "\u79c1\u306f\u30c7\u30a4\u30d3\u30c3\u30c9\u3067\u3059",
-    "\u79c1\u306f\u30c7\u30d3\u30c3\u30c9\u3067\u3059",
-  ],
-  "colombia kara kimashita": [
-    "\u30b3\u30ed\u30f3\u30d3\u30a2\u304b\u3089\u6765\u307e\u3057\u305f",
-    "\u30b3\u30ed\u30f3\u30d3\u30a2\u304b\u3089\u304d\u307e\u3057\u305f",
-    "Colombia\u304b\u3089\u6765\u307e\u3057\u305f",
-  ],
-  "kore wa nan desu ka": [
-    "\u3053\u308c\u306f\u4f55\u3067\u3059\u304b",
-    "\u3053\u308c\u306f\u306a\u3093\u3067\u3059\u304b",
-  ],
-};
 
 const kanaDigraphs: Record<string, string> = {
   "\u304d\u3083": "kya",
@@ -232,13 +210,7 @@ export function sanitizeRomajiTranscript(value: string): string {
 export function romanizeJapaneseTranscript(value: string): string {
   let normalized = value.normalize("NFKC");
 
-  Object.entries(recognitionVariantsByRomaji)
-    .flatMap(([romaji, variants]) =>
-      variants.map((variant) => ({
-        romaji,
-        variant,
-      })),
-    )
+  getRecognitionVariantEntries()
     .sort((left, right) => right.variant.length - left.variant.length)
     .forEach(({ romaji, variant }) => {
       normalized = normalized.replaceAll(variant.normalize("NFKC"), ` ${romaji} `);
@@ -370,6 +342,7 @@ export function getJapaneseDisplayTranscript(
   displayTranscript: string,
   alternatives: SpeechAlternative[] = [],
   expectedRomaji = "",
+  speechVariants: string[] = [],
 ): string {
   const candidates = getRecognitionCandidates(rawTranscript, displayTranscript, alternatives);
   const romanizedCandidate = candidates
@@ -380,11 +353,11 @@ export function getJapaneseDisplayTranscript(
     return romanizedCandidate;
   }
 
-  const normalizedExpected = normalizeSpokenText(expectedRomaji);
-  const expectedVariants = [
-    romajiToHiragana(normalizedExpected),
-    ...(recognitionVariantsByRomaji[normalizedExpected] ?? []),
-  ].filter(Boolean);
+  const expectedVariants = getJapaneseRecognitionVariants(
+    expectedRomaji,
+    undefined,
+    speechVariants,
+  );
   const compactExpectedVariants = expectedVariants.map(compactRecognitionText);
   const heardExpectedKana =
     compactExpectedVariants.length > 0 &&
@@ -409,14 +382,14 @@ export function compareJapaneseSpeech(
   rawTranscript: string,
   displayTranscript: string,
   alternatives: SpeechAlternative[] = [],
+  speechVariants: string[] = [],
 ): OralMatch {
   const normalizedExpected = normalizeSpokenText(expectedRomaji);
-  const expectedKanaFromRomaji = romajiToHiragana(normalizedExpected);
-  const variants = [
-    ...(expectedKanaFromRomaji ? [expectedKanaFromRomaji] : []),
-    ...(recognitionVariantsByRomaji[normalizedExpected] ?? []),
-    ...(expectedKana ? [expectedKana] : []),
-  ];
+  const variants = getJapaneseRecognitionVariants(
+    normalizedExpected,
+    expectedKana,
+    speechVariants,
+  );
   const candidates = getRecognitionCandidates(rawTranscript, displayTranscript, alternatives);
   const compactCandidates = candidates.map(compactRecognitionText);
   const compactVariants = variants.map(compactRecognitionText);

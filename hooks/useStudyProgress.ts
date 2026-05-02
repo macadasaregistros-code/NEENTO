@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
+import { getJapaneseRecognitionVariants } from "@/lib/japanese-recognition";
 import { mockCards, mockProgress } from "@/lib/mock-data";
+import { romajiToHiragana } from "@/lib/speech";
 import {
   createInitialProgress,
   getDueCards,
@@ -159,7 +161,11 @@ function createLocalCard(input: NewVocabularyCardInput): VocabularyCard {
   const learningReading = input.learningReading?.trim() || undefined;
   const supportText = input.supportText.trim();
   const supportReading = input.supportReading?.trim() || undefined;
-  const primaryText = isJapaneseMode ? learningText || learningReading || "" : learningText;
+  const romajiText = learningReading || learningText;
+  const generatedKana = isJapaneseMode ? romajiToHiragana(romajiText) : "";
+  const primaryText = isJapaneseMode
+    ? learningText || generatedKana || learningReading || ""
+    : learningText;
 
   return {
     id: createLocalId(),
@@ -172,11 +178,14 @@ function createLocalCard(input: NewVocabularyCardInput): VocabularyCard {
     learningReading,
     supportText,
     supportReading,
-    japaneseRomaji: isJapaneseMode ? learningReading ?? primaryText : undefined,
-    japaneseKana: isJapaneseMode && learningReading !== primaryText ? primaryText : undefined,
+    japaneseRomaji: isJapaneseMode ? romajiText : undefined,
+    japaneseKana: isJapaneseMode ? primaryText : undefined,
     spanish: isJapaneseMode ? supportText : primaryText,
     category: input.category.trim(),
     displayOrder: Date.now(),
+    speechVariants: isJapaneseMode
+      ? getJapaneseRecognitionVariants(romajiText, primaryText)
+      : undefined,
     createdAt: new Date().toISOString(),
   };
 }
