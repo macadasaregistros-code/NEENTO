@@ -190,7 +190,7 @@ export default function StatsPage() {
         </div>
         <div className="mt-4 space-y-2">
           {statusCounts.map(({ status, count }) => (
-            <div className="rounded-lg bg-slate-50/70 p-2" key={status}>
+            <div className="relative rounded-lg bg-slate-50/70 p-2" key={status}>
               <div className="grid grid-cols-[7.5rem_1fr_2.75rem] items-center gap-3">
                 <button
                   aria-expanded={expandedStatus === status}
@@ -220,7 +220,7 @@ export default function StatsPage() {
                 </Link>
               </div>
               {expandedStatus === status ? (
-                <p className="mt-2 px-1 text-xs font-semibold leading-5 text-slate-500">
+                <p className="pointer-events-none absolute left-2 right-2 top-full z-20 mt-2 rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold leading-5 text-white shadow-xl shadow-slate-300/50">
                   {statusDescriptions[status]}
                 </p>
               ) : null}

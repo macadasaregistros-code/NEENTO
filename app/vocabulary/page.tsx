@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, Plus, Search, Volume2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
@@ -12,6 +12,7 @@ import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import { getSideContent } from "@/lib/learning";
 import { getCardStatus } from "@/lib/srs";
+import { getSpeechPayload, speakText } from "@/lib/speech";
 import type { CardStatus, VocabularyCard } from "@/types/card";
 
 const ALL_CATEGORIES = "__all__";
@@ -111,6 +112,13 @@ function VocabularyContent() {
     statusFilter ? `Estado: ${copy.status[statusFilter]}` : null,
     sourceFilterLabel ? `Origen: ${sourceFilterLabel}` : null,
   ].filter(Boolean);
+
+  function handleSpeak(card: VocabularyCard) {
+    const learningContent = getSideContent(card, "learning");
+    const speech = getSpeechPayload(learningContent);
+
+    void speakText(speech.text, speech.lang);
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -243,7 +251,17 @@ function VocabularyContent() {
                         {learningContent.text}
                       </p>
                     </div>
-                    <ProgressBadge status={status} />
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        aria-label={copy.speech.listen}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-slate-700 shadow-sm ring-1 ring-white transition active:scale-[0.96]"
+                        onClick={() => handleSpeak(card)}
+                        type="button"
+                      >
+                        <Volume2 aria-hidden="true" size={17} />
+                      </button>
+                      <ProgressBadge status={status} />
+                    </div>
                   </div>
 
                   <p className="mt-1 line-clamp-2 text-base font-semibold text-slate-600">

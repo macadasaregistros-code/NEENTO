@@ -271,10 +271,6 @@ function hasJapaneseScript(value: string): boolean {
   return /[\u3040-\u30ff\u3400-\u9fff]/.test(value);
 }
 
-function hasKanji(value: string): boolean {
-  return /[\u3400-\u9fff]/.test(value);
-}
-
 function getRecognitionCandidates(
   rawTranscript: string,
   displayTranscript: string,
@@ -329,7 +325,8 @@ function isCloseSpokenMatch(expected: string, transcript: string): boolean {
   if (
     compactExpected === compactTranscript ||
     compactTranscript.includes(compactExpected) ||
-    (compactTranscript.length >= 4 && compactExpected.includes(compactTranscript))
+    (compactTranscript.length >= Math.max(4, Math.ceil(compactExpected.length * 0.82)) &&
+      compactExpected.includes(compactTranscript))
   ) {
     return true;
   }
@@ -383,7 +380,23 @@ export function getJapaneseDisplayTranscript(
     return romanizedCandidate;
   }
 
-  if (candidates.some(hasJapaneseScript)) {
+  const normalizedExpected = normalizeSpokenText(expectedRomaji);
+  const expectedVariants = [
+    romajiToHiragana(normalizedExpected),
+    ...(recognitionVariantsByRomaji[normalizedExpected] ?? []),
+  ].filter(Boolean);
+  const compactExpectedVariants = expectedVariants.map(compactRecognitionText);
+  const heardExpectedKana =
+    compactExpectedVariants.length > 0 &&
+    candidates
+      .map(compactRecognitionText)
+      .some((candidate) =>
+        compactExpectedVariants.some(
+          (variant) => candidate === variant || candidate.includes(variant),
+        ),
+      );
+
+  if (heardExpectedKana) {
     return normalizeSpokenText(expectedRomaji);
   }
 
@@ -412,12 +425,19 @@ export function compareJapaneseSpeech(
     .filter(Boolean);
 
   const hasJapaneseMatch = compactCandidates.some((candidate) =>
-    compactVariants.some(
-      (variant) =>
-        candidate === variant ||
-        candidate.includes(variant) ||
-        (candidate.length > 1 && variant.includes(candidate)),
-    ),
+    compactVariants.some((variant) => {
+      if (!candidate || !variant) {
+        return false;
+      }
+
+      if (candidate === variant || candidate.includes(variant)) {
+        return true;
+      }
+
+      const minimumPartialLength = Math.max(3, Math.ceil(variant.length * 0.75));
+
+      return variant.includes(candidate) && candidate.length >= minimumPartialLength;
+    }),
   );
 
   if (hasJapaneseMatch) {
@@ -433,11 +453,6 @@ export function compareJapaneseSpeech(
   }
 
   const hasJapaneseCandidate = candidates.some(hasJapaneseScript);
-  const hasKanjiCandidate = candidates.some(hasKanji);
-  if (hasKanjiCandidate) {
-    return "match";
-  }
-
   return hasJapaneseCandidate ? "partial" : "miss";
 }
 

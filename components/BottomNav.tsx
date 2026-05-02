@@ -20,8 +20,8 @@ export function BottomNav() {
   const activeClass = mode === "ko_es" ? "bg-sky-600 text-white" : "bg-emerald-600 text-white";
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md">
-      <nav className="grid grid-cols-4 gap-1.5 rounded-t-2xl border-t border-white/80 bg-white/95 px-3 pb-1.5 pt-2 shadow-[0_-12px_35px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+    <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2">
+      <nav className="grid grid-cols-4 gap-1.5 rounded-t-[1.1rem] border-t border-white/80 bg-white/98 px-2.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -30,7 +30,7 @@ export function BottomNav() {
           return (
             <Link
               aria-current={isActive ? "page" : undefined}
-              className={`flex h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.68rem] font-bold transition ${
+              className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.67rem] font-bold transition ${
                 isActive
                   ? activeClass
                   : "text-slate-500 hover:bg-slate-100 hover:text-ink"

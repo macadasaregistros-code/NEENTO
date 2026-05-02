@@ -305,7 +305,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
   ko_es: {
     appLanguage: "ko",
     defaultOralDirection: "support_to_learning",
-    defaultVisualDirection: "support_to_learning",
+    defaultVisualDirection: "learning_to_support",
     label: "Jju",
     shortLabel: "Jju",
     learningLanguage: "es",

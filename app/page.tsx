@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpen, Eye, Mic, RotateCcw } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, Eye, Mic } from "lucide-react";
 import Link from "next/link";
 
 import { LearningModeSelector } from "@/components/LearningModeSelector";
@@ -15,7 +15,6 @@ export default function HomePage() {
     dataSource,
     oralDueCards,
     progressList,
-    resetProgress,
     syncError,
     visualDueCards,
   } = useStudyProgress();
@@ -72,32 +71,55 @@ export default function HomePage() {
               {copy.readyReviews}
             </p>
           </div>
-          <div className="grid gap-2 text-right">
-            <div className="rounded-lg bg-emerald-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
-                {copy.visual}
-              </p>
-              <p className="mt-1 text-lg font-black text-emerald-950">
-                {visualDueCards.length}
-              </p>
-            </div>
-            <div className="rounded-lg bg-sky-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">
-                {copy.oral}
-              </p>
-              <p className="mt-1 text-lg font-black text-sky-950">
-                {oralDueCards.length}
-              </p>
-            </div>
+          <div className="grid min-w-[8.75rem] gap-2 text-right">
+            <Link
+              className="flex min-h-20 items-center justify-between gap-3 rounded-lg bg-emerald-50 px-4 py-3 text-left ring-1 ring-emerald-100 transition active:scale-[0.98]"
+              href="/practice/visual"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+                <Eye aria-hidden="true" size={19} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                  {copy.visual}
+                </span>
+                <span className="mt-1 block text-xl font-black text-emerald-950">
+                  {visualDueCards.length}
+                </span>
+              </span>
+            </Link>
+            <Link
+              className="flex min-h-20 items-center justify-between gap-3 rounded-lg bg-sky-50 px-4 py-3 text-left ring-1 ring-sky-100 transition active:scale-[0.98]"
+              href="/practice/oral"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm">
+                <Mic aria-hidden="true" size={19} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-black uppercase tracking-[0.16em] text-sky-700">
+                  {copy.oral}
+                </span>
+                <span className="mt-1 block text-xl font-black text-sky-950">
+                  {oralDueCards.length}
+                </span>
+              </span>
+            </Link>
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
+        <Link
+          className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100 transition active:scale-[0.98]"
+          href="/vocabulary"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <BookOpen aria-hidden="true" className="text-slate-400" size={22} />
+            <ArrowRight aria-hidden="true" className="text-slate-300" size={18} />
+          </div>
           <p className="text-3xl font-black text-ink">{cards.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{copy.cards}</p>
-        </div>
+        </Link>
         <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
           <p className="text-3xl font-black text-ink">{reviewedCount}/{cards.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{copy.progressed}</p>
@@ -106,51 +128,22 @@ export default function HomePage() {
 
       <section className="mt-auto space-y-3">
         <Link
-          className="flex h-16 items-center justify-between rounded-lg bg-ink px-5 text-base font-black text-white shadow-soft transition active:scale-[0.99]"
-          href="/practice/visual"
-        >
-          <span className="flex items-center gap-3">
-            <Eye aria-hidden="true" size={22} />
-            {copy.visual}
-          </span>
-          <span>{visualDueCards.length}</span>
-        </Link>
-
-        <Link
-          className={`flex h-16 items-center justify-between rounded-lg px-5 text-base font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
-          href="/practice/oral"
-        >
-          <span className="flex items-center gap-3">
-            <Mic aria-hidden="true" size={22} />
-            {copy.oral}
-          </span>
-          <span>{oralDueCards.length}</span>
-        </Link>
-
-        <Link
-          className="flex h-16 items-center gap-3 rounded-lg bg-white px-5 text-base font-black text-ink shadow-sm ring-1 ring-slate-200 transition active:scale-[0.99]"
-          href="/vocabulary"
-        >
-          <BookOpen aria-hidden="true" size={22} />
-          {copy.vocabulary}
-        </Link>
-
-        <Link
-          className="flex h-16 items-center gap-3 rounded-lg bg-white px-5 text-base font-black text-ink shadow-sm ring-1 ring-slate-200 transition active:scale-[0.99]"
+          className={`flex min-h-20 items-center justify-between gap-4 rounded-lg px-5 text-base font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
           href="/stats"
         >
-          <BarChart3 aria-hidden="true" size={22} />
-          {copy.stats}
+          <span className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20">
+              <BarChart3 aria-hidden="true" size={22} />
+            </span>
+            <span>
+              <span className="block text-lg">{copy.stats}</span>
+              <span className="block text-xs font-bold opacity-80">
+                {reviewedCount}/{cards.length} {copy.progressed}
+              </span>
+            </span>
+          </span>
+          <ArrowRight aria-hidden="true" size={20} />
         </Link>
-
-        <button
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-slate-500 transition hover:bg-white/60"
-          onClick={resetProgress}
-          type="button"
-        >
-          <RotateCcw aria-hidden="true" size={17} />
-          {copy.resetProgress}
-        </button>
       </section>
     </div>
   );
