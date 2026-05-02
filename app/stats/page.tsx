@@ -21,13 +21,50 @@ const statusOrder: CardStatus[] = [
   "difficult",
 ];
 
-const statusDescriptions: Record<CardStatus, string> = {
-  new: "Tarjetas que todavia no tienen repasos registrados.",
-  learning: "Tarjetas en primeras vueltas, con niveles bajos y repasos cercanos.",
-  in_progress: "Tarjetas que ya avanzaron, pero todavia necesitan consolidarse.",
-  strong: "Tarjetas con buen nivel y cada vez menos repasos cercanos.",
-  mastered: "Tarjetas dominadas, con intervalos largos antes de volver a salir.",
-  difficult: "Tarjetas con varios fallos acumulados. Conviene repasarlas con calma.",
+const statusDescriptionsByMode: Record<"daiki" | "jju", Record<CardStatus, string>> = {
+  daiki: {
+    new: "Tarjetas que todavia no tienen repasos registrados.",
+    learning: "Tarjetas en primeras vueltas, con niveles bajos y repasos cercanos.",
+    in_progress: "Tarjetas que ya avanzaron, pero todavia necesitan consolidarse.",
+    strong: "Tarjetas con buen nivel y cada vez menos repasos cercanos.",
+    mastered: "Tarjetas dominadas, con intervalos largos antes de volver a salir.",
+    difficult: "Tarjetas con varios fallos acumulados. Conviene repasarlas con calma.",
+  },
+  jju: {
+    new: "아직 복습 기록이 없는 카드입니다.",
+    learning: "처음 익히는 단계라 짧은 간격으로 다시 나옵니다.",
+    in_progress: "조금씩 익히고 있지만 아직 더 굳혀야 하는 카드입니다.",
+    strong: "잘 기억하고 있어 복습 간격이 길어진 카드입니다.",
+    mastered: "충분히 익혀서 아주 긴 간격으로 다시 나오는 카드입니다.",
+    difficult: "오답이 여러 번 쌓인 카드입니다. 천천히 다시 연습하세요.",
+  },
+};
+
+const statsText = {
+  daiki: {
+    averageLevel: "Nivel promedio",
+    difficultEmpty: "Todavia no hay palabras con fallos.",
+    fails: "fallos",
+    mastered: "dominadas",
+    reinforce: "Para reforzar",
+    reviews: "repasos",
+    sourceTitle: "Origen del vocabulario",
+    statusHint: "toca estado o numero",
+    statusTitle: "Estado de tarjetas",
+    strong: "fuertes",
+  },
+  jju: {
+    averageLevel: "평균 레벨",
+    difficultEmpty: "아직 오답이 있는 카드가 없습니다.",
+    fails: "오답",
+    mastered: "완료",
+    reinforce: "더 연습할 카드",
+    reviews: "복습",
+    sourceTitle: "단어 출처",
+    statusHint: "상태나 숫자를 누르세요",
+    statusTitle: "카드 상태",
+    strong: "강함",
+  },
 };
 
 function percent(value: number, total: number): number {
@@ -60,6 +97,10 @@ export default function StatsPage() {
   const isJju = mode === "ko_es";
   const accentClass = isJju ? "text-sky-700" : "text-emerald-700";
   const barClass = isJju ? "bg-sky-500" : "bg-emerald-500";
+  const text = isJju ? statsText.jju : statsText.daiki;
+  const statusDescriptions = isJju
+    ? statusDescriptionsByMode.jju
+    : statusDescriptionsByMode.daiki;
 
   const reviewedCards = cards.filter((card) => {
     const progress = getProgress(card);
@@ -168,14 +209,16 @@ export default function StatsPage() {
           label={copy.home.progressed}
           value={`${reviewedCards.length}/${cards.length}`}
         />
-        <StatCard icon={<Trophy size={20} />} label="fuertes" value={strongCards.length} />
-        <StatCard icon={<Trophy size={20} />} label="dominadas" value={masteredCards.length} />
+        <StatCard icon={<Trophy size={20} />} label={text.strong} value={strongCards.length} />
+        <StatCard icon={<Trophy size={20} />} label={text.mastered} value={masteredCards.length} />
       </section>
 
       <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-100">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-black text-ink">Nivel promedio</p>
-          <p className="text-xs font-bold text-slate-400">{totalReviews} repasos</p>
+          <p className="text-sm font-black text-ink">{text.averageLevel}</p>
+          <p className="text-xs font-bold text-slate-400">
+            {totalReviews} {text.reviews}
+          </p>
         </div>
         <LevelBar barClass={barClass} label={copy.home.visual} value={visualAverage} />
         <LevelBar barClass={barClass} label={copy.home.oral} value={oralAverage} />
@@ -183,9 +226,9 @@ export default function StatsPage() {
 
       <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-100">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-black text-ink">Estado de tarjetas</p>
+          <p className="text-sm font-black text-ink">{text.statusTitle}</p>
           <p className="text-right text-[0.7rem] font-bold text-slate-400">
-            toca estado o numero
+            {text.statusHint}
           </p>
         </div>
         <div className="mt-4 space-y-2">
@@ -230,7 +273,7 @@ export default function StatsPage() {
       </section>
 
       <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-100">
-        <p className="text-sm font-black text-ink">Origen del vocabulario</p>
+        <p className="text-sm font-black text-ink">{text.sourceTitle}</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <SourceCard label={copy.common.userOwned} value={sourceCounts.user} tone="user" />
           <SourceCard label="Jju" value={sourceCounts.jju} tone="jju" />
@@ -239,7 +282,7 @@ export default function StatsPage() {
       </section>
 
       <section className="space-y-3">
-        <p className="px-1 text-sm font-black text-ink">Para reforzar</p>
+        <p className="px-1 text-sm font-black text-ink">{text.reinforce}</p>
         {difficultCards.length > 0 ? (
           difficultCards.map(({ card, fails }) => (
             <article
@@ -254,13 +297,13 @@ export default function StatsPage() {
                 <CardSourceBadge card={card} />
               </div>
               <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-red-500">
-                {fails} fallos
+                {fails} {text.fails}
               </p>
             </article>
           ))
         ) : (
           <p className="rounded-lg bg-white p-4 text-sm font-bold text-slate-500 shadow-sm ring-1 ring-slate-100">
-            Todavia no hay palabras con fallos.
+            {text.difficultEmpty}
           </p>
         )}
       </section>

@@ -251,17 +251,7 @@ function VocabularyContent() {
                         {learningContent.text}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        aria-label={copy.speech.listen}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-slate-700 shadow-sm ring-1 ring-white transition active:scale-[0.96]"
-                        onClick={() => handleSpeak(card)}
-                        type="button"
-                      >
-                        <Volume2 aria-hidden="true" size={17} />
-                      </button>
-                      <ProgressBadge status={status} />
-                    </div>
+                    <ProgressBadge status={status} />
                   </div>
 
                   <p className="mt-1 line-clamp-2 text-base font-semibold text-slate-600">
@@ -273,6 +263,15 @@ function VocabularyContent() {
                     </p>
                   ) : null}
                 </div>
+
+                <button
+                  aria-label={copy.speech.listen}
+                  className="self-center flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-sm ring-1 ring-white transition active:scale-[0.96]"
+                  onClick={() => handleSpeak(card)}
+                  type="button"
+                >
+                  <Volume2 aria-hidden="true" size={21} />
+                </button>
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">

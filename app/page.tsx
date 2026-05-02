@@ -12,10 +12,8 @@ export default function HomePage() {
   const copy = config.copy.home;
   const {
     cards,
-    dataSource,
     oralDueCards,
     progressList,
-    syncError,
     visualDueCards,
   } = useStudyProgress();
   const reviewedCount = progressList.filter(
@@ -31,53 +29,41 @@ export default function HomePage() {
   const oralButtonClass = isJju
     ? "bg-sky-600 shadow-sky-200"
     : "bg-emerald-600 shadow-emerald-200";
-  const dataSourceLabel =
-    dataSource === "supabase" ? "Datos en la nube" : "Datos en este dispositivo";
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <header className="pt-4">
+    <div className="flex flex-1 flex-col gap-4">
+      <header className="pt-2">
         <p className={`text-sm font-black uppercase tracking-[0.18em] ${accentTextClass}`}>
           {copy.titleKicker}
         </p>
         <h1 className="mt-2 text-5xl font-black leading-none tracking-normal text-ink">
           Neento
         </h1>
-        <p className="mt-3 text-base leading-7 text-slate-600">
+        <p className="mt-2 text-base leading-6 text-slate-600">
           {copy.description}
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-500 shadow-sm ring-1 ring-slate-200">
-            {dataSourceLabel}
-          </span>
-          {syncError ? (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-200">
-              {syncError}
-            </span>
-          ) : null}
-        </div>
       </header>
 
       <LearningModeSelector />
 
-      <section className="rounded-lg bg-white p-5 shadow-soft">
-        <p className="text-sm font-bold text-slate-500">{copy.pendingToday}</p>
-        <div className="mt-2 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-6xl font-black leading-none text-ink">
+      <section className="rounded-lg bg-white p-4 shadow-soft">
+        <p className="text-center text-sm font-bold text-slate-500">{copy.pendingToday}</p>
+        <div className="mt-3 grid grid-cols-[1fr_8.4rem] items-stretch gap-3">
+          <div className="flex flex-col items-center justify-center text-center">
+            <p className="text-5xl font-black leading-none text-ink">
               {visualDueCards.length + oralDueCards.length}
             </p>
-            <p className="mt-2 text-sm font-semibold text-slate-500">
+            <p className="mt-1 text-sm font-semibold text-slate-500">
               {copy.readyReviews}
             </p>
           </div>
-          <div className="grid min-w-[8.75rem] gap-2 text-right">
+          <div className="grid gap-2 text-right">
             <Link
-              className="flex min-h-20 items-center justify-between gap-3 rounded-lg bg-emerald-50 px-4 py-3 text-left ring-1 ring-emerald-100 transition active:scale-[0.98]"
+              className="flex min-h-[4.3rem] items-center justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-left ring-1 ring-emerald-100 transition active:scale-[0.98]"
               href="/practice/visual"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                <Eye aria-hidden="true" size={19} />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+                <Eye aria-hidden="true" size={18} />
               </span>
               <span className="min-w-0">
                 <span className="block text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
@@ -89,11 +75,11 @@ export default function HomePage() {
               </span>
             </Link>
             <Link
-              className="flex min-h-20 items-center justify-between gap-3 rounded-lg bg-sky-50 px-4 py-3 text-left ring-1 ring-sky-100 transition active:scale-[0.98]"
+              className="flex min-h-[4.3rem] items-center justify-between gap-2 rounded-lg bg-sky-50 px-3 py-2 text-left ring-1 ring-sky-100 transition active:scale-[0.98]"
               href="/practice/oral"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm">
-                <Mic aria-hidden="true" size={19} />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm">
+                <Mic aria-hidden="true" size={18} />
               </span>
               <span className="min-w-0">
                 <span className="block text-xs font-black uppercase tracking-[0.16em] text-sky-700">
@@ -110,7 +96,7 @@ export default function HomePage() {
 
       <section className="grid grid-cols-2 gap-3">
         <Link
-          className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100 transition active:scale-[0.98]"
+          className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-100 transition active:scale-[0.98]"
           href="/vocabulary"
         >
           <div className="flex items-start justify-between gap-2">
@@ -120,7 +106,7 @@ export default function HomePage() {
           <p className="text-3xl font-black text-ink">{cards.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{copy.cards}</p>
         </Link>
-        <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
+        <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-100">
           <p className="text-3xl font-black text-ink">{reviewedCount}/{cards.length}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{copy.progressed}</p>
         </div>
@@ -128,12 +114,12 @@ export default function HomePage() {
 
       <section className="mt-auto space-y-3">
         <Link
-          className={`flex min-h-20 items-center justify-between gap-4 rounded-lg px-5 text-base font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
+          className={`flex min-h-[4.4rem] items-center justify-between gap-4 rounded-lg px-5 text-base font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
           href="/stats"
         >
           <span className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20">
-              <BarChart3 aria-hidden="true" size={22} />
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <BarChart3 aria-hidden="true" size={21} />
             </span>
             <span>
               <span className="block text-lg">{copy.stats}</span>
