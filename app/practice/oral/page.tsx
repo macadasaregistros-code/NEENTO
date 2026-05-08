@@ -119,17 +119,17 @@ export default function OralPracticePage() {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <header className="flex items-center justify-between gap-2">
+        <PracticeCategorySelect
+          categories={categories}
+          className="w-[6.65rem] shrink-0"
+          onChange={setSelectedCategory}
+          value={selectedCategory}
+        />
         <DirectionToggle
           className="min-w-0 flex-1"
           variant="compact"
           value={direction}
           onChange={setDirection}
-        />
-        <PracticeCategorySelect
-          categories={categories}
-          className="w-[7.2rem] shrink-0"
-          onChange={setSelectedCategory}
-          value={selectedCategory}
         />
         <div className="shrink-0 text-right">
           <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-slate-400">
