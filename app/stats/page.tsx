@@ -1,12 +1,14 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Flame, Layers3, Info, Trophy } from "lucide-react";
+import { ArrowLeft, BarChart3, Flame, Layers3, Info, Trophy, Volume2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
 import { CardSourceBadge } from "@/components/CardSourceBadge";
 import { ProgressBadge } from "@/components/ProgressBadge";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useJjuAudioRecords } from "@/hooks/useJjuAudioRecords";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import { getCardStatus } from "@/lib/srs";
@@ -93,6 +95,8 @@ export default function StatsPage() {
   const copy = config.copy;
   const { cards, getProgress, oralDueCards, progressList, visualDueCards } =
     useStudyProgress();
+  const { isOwner } = useCurrentUser();
+  const { recordsByCardId } = useJjuAudioRecords();
   const [expandedStatus, setExpandedStatus] = useState<CardStatus | null>(null);
   const isJju = mode === "ko_es";
   const accentClass = isJju ? "text-sky-700" : "text-emerald-700";
@@ -155,6 +159,10 @@ export default function StatsPage() {
     .filter((item) => item.fails > 0)
     .sort((left, right) => right.fails - left.fails)
     .slice(0, 5);
+  const jjuAudioCards = cards.filter((card) => card.starterGroup === "jju");
+  const pendingJjuAudioCount = jjuAudioCards.filter(
+    (card) => !recordsByCardId.has(card.id),
+  ).length;
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -212,6 +220,28 @@ export default function StatsPage() {
         <StatCard icon={<Trophy size={20} />} label={text.strong} value={strongCards.length} />
         <StatCard icon={<Trophy size={20} />} label={text.mastered} value={masteredCards.length} />
       </section>
+
+      {isJju && isOwner ? (
+        <Link
+          className="flex items-center justify-between gap-4 rounded-lg bg-sky-100 p-4 text-sky-950 shadow-sm ring-1 ring-sky-200 transition active:scale-[0.98]"
+          href="/stats/jju-audios"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm">
+              <Volume2 aria-hidden="true" size={21} />
+            </span>
+            <span>
+              <span className="block text-base font-black">Audios para Jju</span>
+              <span className="block text-xs font-bold text-sky-700">
+                {pendingJjuAudioCount} pendientes / {jjuAudioCards.length} tarjetas
+              </span>
+            </span>
+          </span>
+          <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-sky-700">
+            abrir
+          </span>
+        </Link>
+      ) : null}
 
       <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-100">
         <div className="flex items-center justify-between">

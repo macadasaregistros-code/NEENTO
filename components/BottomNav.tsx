@@ -8,7 +8,7 @@ import { useLearningMode } from "@/hooks/useLearningMode";
 import { triggerHaptic } from "@/lib/haptics";
 
 const items = [
-  { href: "/", labelKey: "home", icon: Home },
+  { href: "/dashboard", labelKey: "home", icon: Home },
   { href: "/practice/visual", labelKey: "visual", icon: Eye },
   { href: "/practice/oral", labelKey: "oral", icon: Mic },
   { href: "/vocabulary", labelKey: "vocabulary", icon: BookOpen },
@@ -20,17 +20,19 @@ export function BottomNav() {
   const activeClass = mode === "ko_es" ? "bg-sky-600 text-white" : "bg-emerald-600 text-white";
 
   return (
-    <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2">
-      <nav className="grid grid-cols-4 gap-1.5 rounded-t-[1.1rem] border-t border-white/80 bg-white/98 px-2.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+    <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 bg-white/98 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+      <nav className="grid grid-cols-4 gap-1.5 rounded-t-[1rem] border-t border-white/80 px-2.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            item.href === "/dashboard"
+              ? pathname === "/" || pathname === "/dashboard"
+              : pathname.startsWith(item.href);
 
           return (
             <Link
               aria-current={isActive ? "page" : undefined}
-              className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.67rem] font-bold transition ${
+              className={`flex h-10 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.65rem] font-bold transition ${
                 isActive
                   ? activeClass
                   : "text-slate-500 hover:bg-slate-100 hover:text-ink"

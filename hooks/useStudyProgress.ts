@@ -13,8 +13,11 @@ import {
   updateProgress,
 } from "@/lib/srs";
 import {
+  createSupabaseCard,
   fetchSupabaseStudyData,
+  saveSupabaseProgress,
 } from "@/lib/supabase-data";
+import { supabase } from "@/lib/supabase";
 import type {
   CardProgress,
   NewVocabularyCardInput,
@@ -199,6 +202,7 @@ export function useStudyProgress() {
   const [dataSource, setDataSource] = useState<DataSource>("local");
   const [isHydrated, setIsHydrated] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -212,7 +216,18 @@ export function useStudyProgress() {
     setIsHydrated(true);
     setSyncError(null);
 
-    fetchSupabaseStudyData()
+    async function loadSupabaseData() {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error || !data.user) {
+        throw error ?? new Error("Missing Supabase user.");
+      }
+
+      setUserId(data.user.id);
+      return fetchSupabaseStudyData(data.user.id);
+    }
+
+    loadSupabaseData()
       .then((studyData) => {
         if (!isMounted) {
           return;
@@ -227,7 +242,7 @@ export function useStudyProgress() {
 
         setAllCards(nextCards);
         setProgressList(
-          mergeProgressForCards(nextCards, studyData.progressList, storedProgress),
+          mergeProgressForCards(nextCards, studyData.progressList),
         );
         setDataSource("supabase");
         setSyncError(null);
@@ -240,6 +255,7 @@ export function useStudyProgress() {
         setAllCards(localCards);
         setProgressList(mergeProgressForCards(localCards, mockProgress, storedProgress));
         setDataSource("local");
+        setUserId(null);
         setSyncError(config.copy.sync.supabaseFailed);
       });
 
@@ -307,8 +323,13 @@ export function useStudyProgress() {
         );
       });
 
+      if (userId) {
+        saveSupabaseProgress(updatedProgress, userId).catch(() => {
+          setSyncError(config.copy.sync.saveFailed);
+        });
+      }
     },
-    [progressByCardId],
+    [config.copy.sync.saveFailed, progressByCardId, userId],
   );
 
   const resetProgress = useCallback(() => {
@@ -323,16 +344,18 @@ export function useStudyProgress() {
 
   const createCard = useCallback(
     async (input: NewVocabularyCardInput) => {
-      const createdCard = createLocalCard(input);
-      const createdProgress = createInitialProgress(createdCard.id);
+      const createdCard = userId
+        ? await createSupabaseCard(input, userId).catch(() => createLocalCard(input))
+        : createLocalCard(input);
+      const createdProgress = createInitialProgress(createdCard.id, userId ?? undefined);
 
       setAllCards((currentCards) => [...currentCards, createdCard]);
       setProgressList((currentProgress) => [...currentProgress, createdProgress]);
-      setSyncError(null);
+      setSyncError(createdCard.id.startsWith("local-") ? config.copy.sync.saveFailed : null);
 
       return createdCard;
     },
-    [],
+    [config.copy.sync.saveFailed, userId],
   );
 
   const visualDueCards = useMemo(
@@ -356,6 +379,7 @@ export function useStudyProgress() {
     resetProgress,
     reviewCard,
     syncError,
+    userId,
     visualDueCards,
   };
 }

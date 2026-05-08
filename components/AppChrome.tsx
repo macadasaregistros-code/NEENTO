@@ -22,7 +22,7 @@ export function AppChrome({ children }: AppChromeProps) {
 
   return (
     <main className={`min-h-dvh text-ink ${themeClass}`}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-[calc(4.35rem+env(safe-area-inset-bottom))] pt-[max(0.8rem,env(safe-area-inset-top))]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-[calc(3.45rem+env(safe-area-inset-bottom))] pt-[max(0.8rem,env(safe-area-inset-top))]">
         {children}
       </div>
       {shouldShowAppNav ? <BottomNav /> : null}

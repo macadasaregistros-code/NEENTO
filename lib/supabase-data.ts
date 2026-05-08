@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { getJapaneseRecognitionVariants } from "@/lib/japanese-recognition";
 import { romajiToHiragana } from "@/lib/speech";
 import { createInitialProgress, normalizeProgress } from "@/lib/srs";
+import { fetchJjuAudioRecords } from "@/lib/jju-audio";
 import type {
   CardProgress,
   CardType,
@@ -60,6 +61,31 @@ interface CardProgressRow {
 interface StudyData {
   cards: VocabularyCard[];
   progressList: CardProgress[];
+}
+
+async function attachJjuAudio(cards: VocabularyCard[]): Promise<VocabularyCard[]> {
+  const audioRecords = await fetchJjuAudioRecords();
+
+  if (audioRecords.length === 0) {
+    return cards;
+  }
+
+  const audioByCardId = new Map(audioRecords.map((record) => [record.cardId, record]));
+
+  return cards.map((card) => {
+    const audioRecord = audioByCardId.get(card.id);
+
+    if (!audioRecord) {
+      return card;
+    }
+
+    return {
+      ...card,
+      officialAudioMimeType: audioRecord.mimeType,
+      officialAudioPath: audioRecord.storagePath,
+      officialAudioUpdatedAt: audioRecord.updatedAt,
+    };
+  });
 }
 
 function getLegacyMode(row: CardRow): LearningMode {
@@ -182,7 +208,7 @@ export async function fetchSupabaseStudyData(userId?: string): Promise<StudyData
     return null;
   }
 
-  const cards = (cardRows as CardRow[]).map(toVocabularyCard);
+  const cards = await attachJjuAudio((cardRows as CardRow[]).map(toVocabularyCard));
 
   if (!userId) {
     return {
@@ -281,7 +307,7 @@ export async function createSupabaseCard(
     support_reading: supportReading,
     japanese_romaji: isJapaneseMode ? learningReading ?? learningText : learningText,
     japanese_kana: isJapaneseMode && learningReading !== learningText ? learningText : null,
-    spanish: supportText,
+    spanish: isJapaneseMode ? supportText : learningText,
     category: input.category.trim(),
   };
   const { data, error } = await supabase

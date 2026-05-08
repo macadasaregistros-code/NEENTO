@@ -2,12 +2,14 @@
 
 import { Check, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DirectionToggle } from "@/components/DirectionToggle";
 import { EmptyState } from "@/components/EmptyState";
+import { PracticeCategorySelect } from "@/components/PracticeCategorySelect";
 import { SwipeCard } from "@/components/SwipeCard";
 import { useLearningMode } from "@/hooks/useLearningMode";
+import { usePracticeCategoryFilter } from "@/hooks/usePracticeCategoryFilter";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import {
   createPracticeSessionSeed,
@@ -30,8 +32,22 @@ export default function VisualPracticePage() {
   const [reviewedSessionCardIds, setReviewedSessionCardIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const orderedDueCards = orderDueCards(visualDueCards, sessionSeed);
-  const orderedFreePracticeCards = orderPracticeCards(cards, sessionSeed);
+  const {
+    categories,
+    matchesSelectedCategory,
+    selectedCategory,
+    setSelectedCategory,
+  } = usePracticeCategoryFilter(cards, mode, "visual");
+  const filteredCards = useMemo(
+    () => cards.filter(matchesSelectedCategory),
+    [cards, matchesSelectedCategory],
+  );
+  const filteredVisualDueCards = useMemo(
+    () => visualDueCards.filter(({ card }) => matchesSelectedCategory(card)),
+    [matchesSelectedCategory, visualDueCards],
+  );
+  const orderedDueCards = orderDueCards(filteredVisualDueCards, sessionSeed);
+  const orderedFreePracticeCards = orderPracticeCards(filteredCards, sessionSeed);
   const dueCurrent = orderedDueCards.find(
     ({ card }) => !reviewedSessionCardIds.has(card.id),
   );
@@ -44,9 +60,10 @@ export default function VisualPracticePage() {
         }
       : undefined
     : dueCurrent;
+  const freePracticeTotal = filteredCards.length;
   const pendingLabel = isFreePractice
-    ? `${Math.min(freePracticeIndex + 1, cards.length)}/${cards.length} ${config.copy.common.free}`
-    : `${visualDueCards.length} ${copy.pending}`;
+    ? `${freePracticeTotal === 0 ? 0 : Math.min(freePracticeIndex + 1, freePracticeTotal)}/${freePracticeTotal} ${config.copy.common.free}`
+    : `${filteredVisualDueCards.length} ${copy.pending}`;
 
   useEffect(() => {
     setDirection(config.defaultVisualDirection);
@@ -55,6 +72,14 @@ export default function VisualPracticePage() {
     setFreePracticeIndex(0);
     setReviewedSessionCardIds(new Set());
   }, [config.defaultVisualDirection, mode]);
+
+  useEffect(() => {
+    setFeedback(null);
+    setSessionSeed(createPracticeSessionSeed());
+    setIsFreePractice(false);
+    setFreePracticeIndex(0);
+    setReviewedSessionCardIds(new Set());
+  }, [selectedCategory]);
 
   useEffect(() => {
     if (!feedback) {
@@ -95,10 +120,16 @@ export default function VisualPracticePage() {
     <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <header className="flex items-center justify-between gap-2">
         <DirectionToggle
-          className="max-w-[12.5rem] flex-1"
+          className="min-w-0 flex-1"
           variant="compact"
           value={direction}
           onChange={setDirection}
+        />
+        <PracticeCategorySelect
+          categories={categories}
+          className="w-[7.2rem] shrink-0"
+          onChange={setSelectedCategory}
+          value={selectedCategory}
         />
         <div className="shrink-0 text-right">
           <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-slate-400">
@@ -134,20 +165,22 @@ export default function VisualPracticePage() {
         <SwipeCard
           card={current.card}
           direction={direction}
-          key={`${current.card.id}-${direction}`}
+          key={`${current.card.id}-${direction}-${selectedCategory}`}
           onReview={handleReview}
           progress={current.progress}
         />
       ) : (
         <EmptyState
           topAction={
-            <button
-              className="rounded-lg bg-emerald-600 px-5 py-4 text-sm font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.98]"
-              onClick={startFreePractice}
-              type="button"
-            >
-              {copy.keepPracticing}
-            </button>
+            freePracticeTotal > 0 ? (
+              <button
+                className="rounded-lg bg-emerald-600 px-5 py-4 text-sm font-black text-white shadow-lg shadow-emerald-200 transition active:scale-[0.98]"
+                onClick={startFreePractice}
+                type="button"
+              >
+                {copy.keepPracticing}
+              </button>
+            ) : null
           }
           action={
             <Link

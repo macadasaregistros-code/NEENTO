@@ -8,6 +8,7 @@ import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBad
 import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
+import { playCardSideAudio } from "@/lib/card-audio";
 import { triggerHaptic } from "@/lib/haptics";
 import {
   getAnswerSide,
@@ -15,7 +16,6 @@ import {
   getSideContent,
   type SideContent,
 } from "@/lib/learning";
-import { getSpeechPayload, speakText } from "@/lib/speech";
 import type {
   CardProgress,
   PracticeDirection,
@@ -79,10 +79,8 @@ export function SwipeCard({ card, direction, progress, onReview }: SwipeCardProp
   }
 
   function handleSpeak(content: SideContent) {
-    const speech = getSpeechPayload(content);
-
     triggerHaptic("light");
-    void speakText(speech.text, speech.lang);
+    void playCardSideAudio(card, content);
   }
 
   function renderListenButton(content: SideContent) {

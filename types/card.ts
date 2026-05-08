@@ -40,6 +40,9 @@ export interface VocabularyCard {
   category: string;
   imageUrl?: string;
   audioUrl?: string;
+  officialAudioMimeType?: string;
+  officialAudioPath?: string;
+  officialAudioUpdatedAt?: string;
   speechVariants?: string[];
   createdAt: string;
 }

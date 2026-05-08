@@ -10,9 +10,9 @@ import { LevelBadge } from "@/components/LevelBadge";
 import { ProgressBadge } from "@/components/ProgressBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
+import { playCardSideAudio } from "@/lib/card-audio";
 import { getSideContent } from "@/lib/learning";
 import { getCardStatus } from "@/lib/srs";
-import { getSpeechPayload, speakText } from "@/lib/speech";
 import type { CardStatus, VocabularyCard } from "@/types/card";
 
 const ALL_CATEGORIES = "__all__";
@@ -115,9 +115,8 @@ function VocabularyContent() {
 
   function handleSpeak(card: VocabularyCard) {
     const learningContent = getSideContent(card, "learning");
-    const speech = getSpeechPayload(learningContent);
 
-    void speakText(speech.text, speech.lang);
+    void playCardSideAudio(card, learningContent);
   }
 
   return (

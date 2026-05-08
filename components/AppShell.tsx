@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { AppChrome } from "@/components/AppChrome";
+import { AuthGate } from "@/components/AuthGate";
 import { LearningModeProvider } from "@/hooks/useLearningMode";
 
 interface AppShellProps {
@@ -10,7 +11,9 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   return (
     <LearningModeProvider>
-      <AppChrome>{children}</AppChrome>
+      <AuthGate>
+        <AppChrome>{children}</AppChrome>
+      </AuthGate>
     </LearningModeProvider>
   );
 }

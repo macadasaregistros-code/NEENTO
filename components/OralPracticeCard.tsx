@@ -9,6 +9,7 @@ import { CardSourceBadge, getCardSurfaceClass } from "@/components/CardSourceBad
 import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
+import { playCardSideAudio } from "@/lib/card-audio";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { triggerHaptic } from "@/lib/haptics";
 import {
@@ -22,7 +23,6 @@ import {
   compareTextSpeech,
   getJapaneseDisplayTranscript,
 } from "@/lib/oral";
-import { getExpectedSpeech, speakText } from "@/lib/speech";
 import type {
   CardProgress,
   PracticeDirection,
@@ -426,12 +426,12 @@ export function OralPracticeCard({
   }
 
   async function handleSpeak() {
-    const expectedSpeech = getExpectedSpeech(card, direction);
-
     triggerHaptic("light");
-    const speechResult = await speakText(expectedSpeech.text, expectedSpeech.lang);
+    const speechResult = await playCardSideAudio(card, answerContent);
     setSpeechMessage(
-      speechResult === "spoken" ? copy.speech.listen : copy.speech.voiceUnavailable,
+      speechResult === "spoken" || speechResult === "audio"
+        ? copy.speech.listen
+        : copy.speech.voiceUnavailable,
     );
   }
 
