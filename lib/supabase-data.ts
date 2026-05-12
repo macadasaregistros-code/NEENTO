@@ -309,6 +309,7 @@ export async function createSupabaseCard(
     japanese_kana: isJapaneseMode && learningReading !== learningText ? learningText : null,
     spanish: isJapaneseMode ? supportText : learningText,
     category: input.category.trim(),
+    image_url: input.imageUrl ?? null,
   };
   const { data, error } = await supabase
     .from("cards")

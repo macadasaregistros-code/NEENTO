@@ -185,6 +185,7 @@ function createLocalCard(input: NewVocabularyCardInput): VocabularyCard {
     japaneseKana: isJapaneseMode ? primaryText : undefined,
     spanish: isJapaneseMode ? supportText : primaryText,
     category: input.category.trim(),
+    imageUrl: input.imageUrl,
     displayOrder: Date.now(),
     speechVariants: isJapaneseMode
       ? getJapaneseRecognitionVariants(romajiText, primaryText)

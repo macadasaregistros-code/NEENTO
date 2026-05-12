@@ -1,13 +1,14 @@
 "use client";
 
-import { ArrowLeft, Check, Plus } from "lucide-react";
+import { ArrowLeft, Check, ImagePlus, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
+import { uploadCardImage, validateCardImage } from "@/lib/card-images";
 import type { CardType, NewVocabularyCardInput } from "@/types/card";
 
 const NEW_CATEGORY = "__new__";
@@ -36,10 +37,12 @@ export default function NewVocabularyPage() {
   const router = useRouter();
   const { config, mode } = useLearningMode();
   const copy = config.copy;
-  const { cards, createCard } = useStudyProgress();
+  const { cards, createCard, userId } = useStudyProgress();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [error, setError] = useState<string | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const isJapaneseMode = mode === "ja_es";
   const isJju = mode === "ko_es";
   const accentClass = isJju
@@ -55,6 +58,19 @@ export default function NewVocabularyPage() {
     [cards],
   );
 
+  useEffect(() => {
+    if (!selectedImageFile) {
+      setImagePreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImageFile);
+
+    setImagePreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedImageFile]);
+
   function updateFormValue<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setFormValues((current) => ({
       ...current,
@@ -68,7 +84,7 @@ export default function NewVocabularyPage() {
       : formValues.categoryChoice;
   }
 
-  function buildCardInput(): NewVocabularyCardInput {
+  function buildCardInput(imageUrl?: string): NewVocabularyCardInput {
     const category = getCategory();
 
     if (isJapaneseMode) {
@@ -82,6 +98,7 @@ export default function NewVocabularyPage() {
         learningReading: romaji,
         supportText: formValues.supportText.trim(),
         category,
+        imageUrl,
       };
     }
 
@@ -92,7 +109,27 @@ export default function NewVocabularyPage() {
       supportText: formValues.supportText.trim(),
       supportReading: formValues.supportReading.trim() || undefined,
       category,
+      imageUrl,
     };
+  }
+
+  function handleImageChange(file: File | null) {
+    setError(null);
+
+    if (!file) {
+      setSelectedImageFile(null);
+      return;
+    }
+
+    const validationError = validateCardImage(file);
+
+    if (validationError) {
+      setSelectedImageFile(null);
+      setError(validationError);
+      return;
+    }
+
+    setSelectedImageFile(file);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -109,7 +146,17 @@ export default function NewVocabularyPage() {
     setIsSaving(true);
 
     try {
-      await createCard(buildCardInput());
+      let imageUrl: string | undefined;
+
+      if (selectedImageFile) {
+        if (!userId) {
+          throw new Error("Espera a que cargue tu sesion para subir la foto.");
+        }
+
+        imageUrl = await uploadCardImage(userId, selectedImageFile);
+      }
+
+      await createCard(buildCardInput(imageUrl));
       router.push("/vocabulary");
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : copy.vocabulary.createError);
@@ -241,6 +288,58 @@ export default function NewVocabularyPage() {
           ) : null}
         </section>
 
+        <section className="grid gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-black text-ink">Foto opcional</p>
+              <p className="mt-1 text-xs font-semibold text-slate-400">
+                JPG, PNG, WEBP o GIF. Maximo 5 MB.
+              </p>
+            </div>
+            {selectedImageFile ? (
+              <button
+                aria-label="Quitar foto"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 ring-1 ring-red-100 transition active:scale-[0.96]"
+                onClick={() => setSelectedImageFile(null)}
+                type="button"
+              >
+                <Trash2 aria-hidden="true" size={18} />
+              </button>
+            ) : null}
+          </div>
+
+          <label
+            className={`flex min-h-32 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-200 bg-slate-50 text-center transition active:scale-[0.99] ${fieldFocusClass}`}
+          >
+            {imagePreviewUrl ? (
+              <div
+                aria-label="Vista previa de la foto"
+                className="h-40 w-full bg-cover bg-center"
+                style={{ backgroundImage: `url("${imagePreviewUrl}")` }}
+              />
+            ) : (
+              <span className="flex flex-col items-center gap-2 px-4 py-6 text-slate-500">
+                <span
+                  className={`flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg ${accentClass}`}
+                >
+                  <ImagePlus aria-hidden="true" size={22} />
+                </span>
+                <span className="text-sm font-black">Agregar foto</span>
+                <span className="text-xs font-semibold text-slate-400">
+                  Puedes tomar una foto o elegir de la galeria.
+                </span>
+              </span>
+            )}
+            <input
+              accept="image/gif,image/jpeg,image/png,image/webp"
+              className="sr-only"
+              key={selectedImageFile ? "selected-image" : "empty-image"}
+              onChange={(event) => handleImageChange(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+          </label>
+        </section>
+
         {error ? (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-100">
             {error}
@@ -253,7 +352,11 @@ export default function NewVocabularyPage() {
           type="submit"
         >
           <Check aria-hidden="true" size={19} />
-          {isSaving ? "Guardando..." : copy.vocabulary.createCard}
+          {isSaving
+            ? selectedImageFile
+              ? "Subiendo foto..."
+              : "Guardando..."
+            : copy.vocabulary.createCard}
         </button>
       </form>
     </div>

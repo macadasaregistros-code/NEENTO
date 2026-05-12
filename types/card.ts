@@ -55,6 +55,7 @@ export interface NewVocabularyCardInput {
   supportText: string;
   supportReading?: string;
   category: string;
+  imageUrl?: string;
 }
 
 export interface CardProgress {
