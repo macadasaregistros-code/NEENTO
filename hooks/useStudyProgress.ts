@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
-import { getJapaneseRecognitionVariants } from "@/lib/japanese-recognition";
 import { mockCards, mockProgress } from "@/lib/mock-data";
-import { romajiToHiragana } from "@/lib/speech";
 import {
   createInitialProgress,
   getDueCards,
@@ -30,14 +28,6 @@ const STORAGE_KEY_PREFIX = "neento-card-progress-v2";
 const LOCAL_CARDS_STORAGE_KEY = "neento-local-cards-v2";
 
 type DataSource = "local" | "supabase";
-
-function createLocalId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `local-${crypto.randomUUID()}`;
-  }
-
-  return `local-${Date.now()}`;
-}
 
 function getCardSortPriority(card: VocabularyCard): number {
   if (!card.isStarter) {
@@ -158,39 +148,51 @@ function readStoredCards(): VocabularyCard[] {
   }
 }
 
-function createLocalCard(input: NewVocabularyCardInput): VocabularyCard {
-  const isJapaneseMode = input.learningMode === "ja_es";
-  const learningText = input.learningText.trim();
-  const learningReading = input.learningReading?.trim() || undefined;
-  const supportText = input.supportText.trim();
-  const supportReading = input.supportReading?.trim() || undefined;
-  const romajiText = learningReading || learningText;
-  const generatedKana = isJapaneseMode ? romajiToHiragana(romajiText) : "";
-  const primaryText = isJapaneseMode
-    ? learningText || generatedKana || learningReading || ""
-    : learningText;
+function toNewCardInput(card: VocabularyCard): NewVocabularyCardInput {
+  return {
+    type: card.type,
+    learningMode: card.learningMode,
+    learningText: card.learningText,
+    learningReading: card.learningReading,
+    supportText: card.supportText,
+    supportReading: card.supportReading,
+    category: card.category,
+    imageUrl: card.imageUrl,
+  };
+}
+
+async function syncLocalCardsToSupabase(
+  localCards: VocabularyCard[],
+  userId: string,
+): Promise<{
+  failedCards: VocabularyCard[];
+  syncedCards: VocabularyCard[];
+}> {
+  if (localCards.length === 0) {
+    return {
+      failedCards: [],
+      syncedCards: [],
+    };
+  }
+
+  const failedCards: VocabularyCard[] = [];
+  const syncedCards: VocabularyCard[] = [];
+
+  for (const card of localCards) {
+    try {
+      const syncedCard = await createSupabaseCard(toNewCardInput(card), userId);
+
+      syncedCards.push(syncedCard);
+    } catch {
+      failedCards.push(card);
+    }
+  }
+
+  window.localStorage.setItem(LOCAL_CARDS_STORAGE_KEY, JSON.stringify(failedCards));
 
   return {
-    id: createLocalId(),
-    type: input.type,
-    isStarter: false,
-    learningMode: input.learningMode,
-    learningLanguage: isJapaneseMode ? "ja" : "es",
-    supportLanguage: isJapaneseMode ? "es" : "ko",
-    learningText: primaryText,
-    learningReading,
-    supportText,
-    supportReading,
-    japaneseRomaji: isJapaneseMode ? romajiText : undefined,
-    japaneseKana: isJapaneseMode ? primaryText : undefined,
-    spanish: isJapaneseMode ? supportText : primaryText,
-    category: input.category.trim(),
-    imageUrl: input.imageUrl,
-    displayOrder: Date.now(),
-    speechVariants: isJapaneseMode
-      ? getJapaneseRecognitionVariants(romajiText, primaryText)
-      : undefined,
-    createdAt: new Date().toISOString(),
+    failedCards,
+    syncedCards,
   };
 }
 
@@ -225,11 +227,18 @@ export function useStudyProgress() {
       }
 
       setUserId(data.user.id);
-      return fetchSupabaseStudyData(data.user.id);
+
+      const syncedLocalCards = await syncLocalCardsToSupabase(storedCards, data.user.id);
+      const studyData = await fetchSupabaseStudyData(data.user.id);
+
+      return {
+        ...syncedLocalCards,
+        studyData,
+      };
     }
 
     loadSupabaseData()
-      .then((studyData) => {
+      .then(({ failedCards, studyData, syncedCards }) => {
         if (!isMounted) {
           return;
         }
@@ -239,14 +248,18 @@ export function useStudyProgress() {
           return;
         }
 
-        const nextCards = mergeCards(studyData.cards, storedCards);
+        const nextCards = mergeCards([...studyData.cards, ...syncedCards], failedCards);
 
         setAllCards(nextCards);
         setProgressList(
           mergeProgressForCards(nextCards, studyData.progressList),
         );
         setDataSource("supabase");
-        setSyncError(null);
+        setSyncError(
+          failedCards.length > 0 && syncedCards.length === 0
+            ? config.copy.sync.saveFailed
+            : null,
+        );
       })
       .catch(() => {
         if (!isMounted) {
@@ -345,18 +358,33 @@ export function useStudyProgress() {
 
   const createCard = useCallback(
     async (input: NewVocabularyCardInput) => {
-      const createdCard = userId
-        ? await createSupabaseCard(input, userId).catch(() => createLocalCard(input))
-        : createLocalCard(input);
-      const createdProgress = createInitialProgress(createdCard.id, userId ?? undefined);
+      if (!userId) {
+        throw new Error("No hay sesion activa de Supabase. Vuelve a iniciar sesion.");
+      }
+
+      let createdCard: VocabularyCard;
+
+      try {
+        createdCard = await createSupabaseCard(input, userId);
+      } catch (nextError) {
+        const message =
+          nextError instanceof Error
+            ? nextError.message
+            : "No se pudo guardar la tarjeta en Supabase.";
+
+        setSyncError(message);
+        throw new Error(`No se pudo guardar en Supabase: ${message}`);
+      }
+
+      const createdProgress = createInitialProgress(createdCard.id, userId);
 
       setAllCards((currentCards) => [...currentCards, createdCard]);
       setProgressList((currentProgress) => [...currentProgress, createdProgress]);
-      setSyncError(createdCard.id.startsWith("local-") ? config.copy.sync.saveFailed : null);
+      setSyncError(null);
 
       return createdCard;
     },
-    [config.copy.sync.saveFailed, userId],
+    [userId],
   );
 
   const visualDueCards = useMemo(

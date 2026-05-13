@@ -37,7 +37,7 @@ export default function NewVocabularyPage() {
   const router = useRouter();
   const { config, mode } = useLearningMode();
   const copy = config.copy;
-  const { cards, createCard, userId } = useStudyProgress();
+  const { cards, createCard, isHydrated, userId } = useStudyProgress();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [error, setError] = useState<string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -45,6 +45,7 @@ export default function NewVocabularyPage() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const isJapaneseMode = mode === "ja_es";
   const isJju = mode === "ko_es";
+  const canSave = isHydrated && Boolean(userId) && !isSaving;
   const accentClass = isJju
     ? "bg-sky-600 shadow-sky-100 focus:border-sky-500"
     : "bg-emerald-600 shadow-emerald-100 focus:border-emerald-500";
@@ -150,7 +151,7 @@ export default function NewVocabularyPage() {
 
       if (selectedImageFile) {
         if (!userId) {
-          throw new Error("Espera a que cargue tu sesion para subir la foto.");
+          throw new Error("No hay sesion activa de Supabase. Vuelve a iniciar sesion.");
         }
 
         imageUrl = await uploadCardImage(userId, selectedImageFile);
@@ -346,9 +347,15 @@ export default function NewVocabularyPage() {
           </p>
         ) : null}
 
+        {!userId ? (
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 ring-1 ring-amber-100">
+            Espera a que cargue tu sesion. Las tarjetas nuevas se guardan en Supabase.
+          </p>
+        ) : null}
+
         <button
           className={`flex h-14 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black text-white shadow-lg transition active:scale-[0.98] ${accentClass}`}
-          disabled={isSaving}
+          disabled={!canSave}
           type="submit"
         >
           <Check aria-hidden="true" size={19} />
