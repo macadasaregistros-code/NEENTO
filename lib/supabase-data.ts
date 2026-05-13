@@ -208,7 +208,26 @@ export async function fetchSupabaseStudyData(userId?: string): Promise<StudyData
     return null;
   }
 
-  const cards = await attachJjuAudio((cardRows as CardRow[]).map(toVocabularyCard));
+  let mergedCardRows = cardRows as CardRow[];
+
+  if (userId) {
+    const { data: userCardRows } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    const rowsById = new Map(
+      [...mergedCardRows, ...((userCardRows ?? []) as CardRow[])].map((row) => [
+        row.id,
+        row,
+      ]),
+    );
+
+    mergedCardRows = [...rowsById.values()];
+  }
+
+  const cards = await attachJjuAudio(mergedCardRows.map(toVocabularyCard));
 
   if (!userId) {
     return {

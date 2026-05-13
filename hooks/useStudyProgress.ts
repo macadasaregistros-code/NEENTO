@@ -407,9 +407,32 @@ export function useStudyProgress() {
       setProgressList((currentProgress) => [...currentProgress, createdProgress]);
       setSyncError(null);
 
+      saveSupabaseProgress(createdProgress, userId).catch(() => {
+        setSyncError(config.copy.sync.saveFailed);
+      });
+
+      fetchSupabaseStudyData(userId)
+        .then((studyData) => {
+          if (!studyData) {
+            return;
+          }
+
+          setAllCards((currentCards) => mergeCards(studyData.cards, currentCards));
+          setProgressList((currentProgress) =>
+            mergeProgressForCards(
+              mergeCards(studyData.cards, allCards),
+              studyData.progressList,
+              currentProgress,
+            ),
+          );
+        })
+        .catch(() => {
+          setSyncError(config.copy.sync.supabaseFailed);
+        });
+
       return createdCard;
     },
-    [userId],
+    [allCards, config.copy.sync.saveFailed, config.copy.sync.supabaseFailed, userId],
   );
 
   const visualDueCards = useMemo(
