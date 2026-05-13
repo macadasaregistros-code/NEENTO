@@ -28,6 +28,34 @@ const STORAGE_KEY_PREFIX = "neento-card-progress-v2";
 const LOCAL_CARDS_STORAGE_KEY = "neento-local-cards-v2";
 
 type DataSource = "local" | "supabase";
+type SupabaseLikeError = {
+  code?: string;
+  details?: string;
+  hint?: string;
+  message?: string;
+};
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const supabaseError = error as SupabaseLikeError;
+    const parts = [
+      supabaseError.message,
+      supabaseError.details,
+      supabaseError.hint,
+      supabaseError.code ? `Codigo: ${supabaseError.code}` : null,
+    ].filter(Boolean);
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+  }
+
+  return "No se pudo guardar la tarjeta en Supabase.";
+}
 
 function getCardSortPriority(card: VocabularyCard): number {
   if (!card.isStarter) {
@@ -367,10 +395,7 @@ export function useStudyProgress() {
       try {
         createdCard = await createSupabaseCard(input, userId);
       } catch (nextError) {
-        const message =
-          nextError instanceof Error
-            ? nextError.message
-            : "No se pudo guardar la tarjeta en Supabase.";
+        const message = getErrorMessage(nextError);
 
         setSyncError(message);
         throw new Error(`No se pudo guardar en Supabase: ${message}`);

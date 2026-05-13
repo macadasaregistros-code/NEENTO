@@ -296,7 +296,7 @@ export async function createSupabaseCard(
     user_id: userId,
     is_starter: false,
     starter_group: null,
-    display_order: Date.now(),
+    display_order: Math.floor(Date.now() / 1000),
     type: input.type,
     learning_mode: input.learningMode,
     learning_language: isJapaneseMode ? "ja" : "es",
