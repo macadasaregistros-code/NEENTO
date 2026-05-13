@@ -9,6 +9,8 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const FALLBACK_MAX_IMAGE_SIZE = 900;
+const FALLBACK_IMAGE_QUALITY = 0.78;
 
 function getImageExtension(file: File): string {
   const extension = file.name.split(".").pop()?.toLowerCase();
@@ -44,6 +46,61 @@ export function validateCardImage(file: File): string | null {
   return null;
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("No se pudo leer la foto."));
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("No se pudo preparar la foto."));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onerror = () => reject(new Error("No se pudo cargar la foto."));
+    image.onload = () => resolve(image);
+    image.src = url;
+  });
+}
+
+async function createCompressedImageDataUrl(file: File): Promise<string> {
+  const sourceUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(sourceUrl);
+    const scale = Math.min(
+      1,
+      FALLBACK_MAX_IMAGE_SIZE / Math.max(image.naturalWidth, image.naturalHeight),
+    );
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return readFileAsDataUrl(file);
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    context.drawImage(image, 0, 0, width, height);
+
+    return canvas.toDataURL("image/jpeg", FALLBACK_IMAGE_QUALITY);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 export async function uploadCardImage(userId: string, file: File): Promise<string> {
   const validationError = validateCardImage(file);
 
@@ -66,7 +123,7 @@ export async function uploadCardImage(userId: string, file: File): Promise<strin
     });
 
   if (error) {
-    throw error;
+    return createCompressedImageDataUrl(file);
   }
 
   const { data } = supabase.storage
