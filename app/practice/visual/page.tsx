@@ -208,12 +208,16 @@ export default function VisualPracticePage() {
           onChange={setSelectedCategory}
           value={selectedCategory}
         />
-        <DirectionToggle
-          className="min-w-0 flex-1"
-          variant="compact"
-          value={direction}
-          onChange={handleDirectionChange}
-        />
+        {activity === "cards" ? (
+          <DirectionToggle
+            className="min-w-0 flex-1"
+            variant="compact"
+            value={direction}
+            onChange={handleDirectionChange}
+          />
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
         <div className="shrink-0 text-right">
           <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-slate-400">
             {copy.visualTitle}
