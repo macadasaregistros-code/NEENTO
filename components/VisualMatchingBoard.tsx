@@ -9,9 +9,12 @@ import { playFailureSound } from "@/lib/feedback-sounds";
 import { triggerHaptic } from "@/lib/haptics";
 import { getSideContent } from "@/lib/learning";
 import {
-  createVisualMatchingColumns,
+  createVisualMatchingTile,
+  insertVisualMatchingCardId,
+  shuffleVisualMatchingCardIds,
   VISUAL_MATCHING_PAIR_COUNT,
   type VisualMatchingTile,
+  type VisualMatchingTileSide,
 } from "@/lib/visual-matching";
 import type { VocabularyCard } from "@/types/card";
 
@@ -25,6 +28,39 @@ interface VisualMatchingBoardProps {
 const WRONG_FEEDBACK_MS = 520;
 const CORRECT_FEEDBACK_MS = 520;
 const ROUND_COMPLETE_DELAY_MS = 720;
+
+interface MatchingColumnCardIds {
+  dominant: string[];
+  learning: string[];
+}
+
+function createInitialColumnCardIds(
+  cards: VocabularyCard[],
+  seed: string,
+): MatchingColumnCardIds {
+  const cardIds = cards
+    .slice(0, VISUAL_MATCHING_PAIR_COUNT)
+    .map((card) => card.id);
+
+  return {
+    dominant: cardIds,
+    learning: shuffleVisualMatchingCardIds(cardIds, `${seed}:learning`),
+  };
+}
+
+function createColumnTiles(
+  cardIds: string[],
+  side: VisualMatchingTileSide,
+  cardsById: Map<string, VocabularyCard>,
+): VisualMatchingTile[] {
+  return cardIds
+    .map((cardId) => {
+      const card = cardsById.get(cardId);
+
+      return card ? createVisualMatchingTile(card, side) : undefined;
+    })
+    .filter((tile): tile is VisualMatchingTile => Boolean(tile));
+}
 
 function getCompactTextClass(text: string): string {
   const length = text.trim().length;
@@ -78,8 +114,8 @@ export function VisualMatchingBoard({
   const correctFeedbackTimeoutRefs = useRef<number[]>([]);
   const wrongFeedbackTimeoutRef = useRef<number | null>(null);
   const [matchedCardIds, setMatchedCardIds] = useState<Set<string>>(() => new Set());
-  const [visibleCardIds, setVisibleCardIds] = useState<string[]>(() =>
-    cards.slice(0, VISUAL_MATCHING_PAIR_COUNT).map((card) => card.id),
+  const [columnCardIds, setColumnCardIds] = useState<MatchingColumnCardIds>(() =>
+    createInitialColumnCardIds(cards, seed),
   );
   const [, setNextCardIndex] = useState(
     Math.min(VISUAL_MATCHING_PAIR_COUNT, cards.length),
@@ -92,16 +128,13 @@ export function VisualMatchingBoard({
     () => new Map(cards.map((card) => [card.id, card])),
     [cards],
   );
-  const visibleCards = useMemo(
-    () =>
-      visibleCardIds
-        .map((cardId) => cardsById.get(cardId))
-        .filter((card): card is VocabularyCard => Boolean(card)),
-    [cardsById, visibleCardIds],
+  const dominantTiles = useMemo(
+    () => createColumnTiles(columnCardIds.dominant, "dominant", cardsById),
+    [cardsById, columnCardIds.dominant],
   );
-  const { dominantTiles, learningTiles } = useMemo(
-    () => createVisualMatchingColumns(visibleCards, seed),
-    [seed, visibleCards],
+  const learningTiles = useMemo(
+    () => createColumnTiles(columnCardIds.learning, "learning", cardsById),
+    [cardsById, columnCardIds.learning],
   );
   const tiles = useMemo(
     () => [...dominantTiles, ...learningTiles],
@@ -116,7 +149,13 @@ export function VisualMatchingBoard({
     const nextCardIds = cardsKey ? cardsKey.split("|") : [];
 
     setMatchedCardIds(new Set());
-    setVisibleCardIds(nextCardIds.slice(0, VISUAL_MATCHING_PAIR_COUNT));
+    setColumnCardIds({
+      dominant: nextCardIds.slice(0, VISUAL_MATCHING_PAIR_COUNT),
+      learning: shuffleVisualMatchingCardIds(
+        nextCardIds.slice(0, VISUAL_MATCHING_PAIR_COUNT),
+        `${seed}:learning`,
+      ),
+    });
     setNextCardIndex(Math.min(VISUAL_MATCHING_PAIR_COUNT, nextCardIds.length));
     setCorrectTileIds(new Set());
     setSelectedTileId(null);
@@ -170,9 +209,10 @@ export function VisualMatchingBoard({
         tileIds.forEach((tileId) => nextTileIds.delete(tileId));
         return nextTileIds;
       });
-      setVisibleCardIds((currentCardIds) =>
-        currentCardIds.filter((currentCardId) => currentCardId !== cardId),
-      );
+      setColumnCardIds((currentIds) => ({
+        dominant: currentIds.dominant.filter((currentCardId) => currentCardId !== cardId),
+        learning: currentIds.learning.filter((currentCardId) => currentCardId !== cardId),
+      }));
       setNextCardIndex((currentIndex) => {
         const nextCard = cards[currentIndex];
 
@@ -180,15 +220,23 @@ export function VisualMatchingBoard({
           return currentIndex;
         }
 
-        setVisibleCardIds((currentCardIds) => {
+        setColumnCardIds((currentIds) => {
           if (
-            currentCardIds.length >= VISUAL_MATCHING_PAIR_COUNT ||
-            currentCardIds.includes(nextCard.id)
+            currentIds.dominant.length >= VISUAL_MATCHING_PAIR_COUNT ||
+            currentIds.dominant.includes(nextCard.id) ||
+            currentIds.learning.includes(nextCard.id)
           ) {
-            return currentCardIds;
+            return currentIds;
           }
 
-          return [...currentCardIds, nextCard.id];
+          return {
+            dominant: [...currentIds.dominant, nextCard.id],
+            learning: insertVisualMatchingCardId(
+              currentIds.learning,
+              nextCard.id,
+              `${seed}:learning:${currentIndex}`,
+            ),
+          };
         });
 
         return currentIndex + 1;
@@ -297,9 +345,15 @@ export function VisualMatchingBoard({
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto pb-2">
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pb-1">
         {[dominantTiles, learningTiles].map((columnTiles, columnIndex) => (
-          <div className="grid content-start gap-2" key={columnIndex}>
+          <div
+            className="grid h-full min-h-[21rem] gap-2"
+            key={columnIndex}
+            style={{
+              gridTemplateRows: `repeat(${VISUAL_MATCHING_PAIR_COUNT}, minmax(3.65rem, 1fr))`,
+            }}
+          >
             {columnTiles.map((tile) => {
               const isMatched = matchedCardIds.has(tile.cardId);
               const isSelected = selectedTileId === tile.id;
@@ -318,7 +372,7 @@ export function VisualMatchingBoard({
                         }
                   }
                   aria-pressed={isSelected}
-                  className={`relative flex min-h-[3.9rem] w-full items-center justify-center overflow-hidden rounded-lg border px-2.5 py-2 text-center shadow-sm ring-1 transition ${
+                  className={`relative flex min-h-0 w-full items-center justify-center overflow-hidden rounded-lg border px-2.5 py-1.5 text-center shadow-sm ring-1 transition ${
                     isCorrect || isMatched
                       ? "pointer-events-none border-emerald-100 bg-emerald-50 text-emerald-700 ring-emerald-100"
                       : isWrong

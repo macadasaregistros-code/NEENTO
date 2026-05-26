@@ -1,7 +1,7 @@
 import { getSideContent, type CardSide, type SideContent } from "@/lib/learning";
 import type { VocabularyCard } from "@/types/card";
 
-export const VISUAL_MATCHING_PAIR_COUNT = 6;
+export const VISUAL_MATCHING_PAIR_COUNT = 5;
 export const VISUAL_MATCHING_DECK_COUNT = VISUAL_MATCHING_PAIR_COUNT * 3;
 
 export type VisualMatchingTileSide = "dominant" | "learning";
@@ -46,30 +46,71 @@ function shuffleTiles(tiles: VisualMatchingTile[], seed: string): VisualMatching
     });
 }
 
+export function shuffleVisualMatchingCardIds(
+  cardIds: string[],
+  seed: string,
+): string[] {
+  return [...cardIds].sort((leftCardId, rightCardId) => {
+    const randomDifference =
+      seededRandomValue(seed, leftCardId) -
+      seededRandomValue(seed, rightCardId);
+
+    if (randomDifference !== 0) {
+      return randomDifference;
+    }
+
+    return leftCardId.localeCompare(rightCardId);
+  });
+}
+
+export function insertVisualMatchingCardId(
+  cardIds: string[],
+  cardId: string,
+  seed: string,
+): string[] {
+  if (cardIds.includes(cardId)) {
+    return cardIds;
+  }
+
+  const insertIndex = Math.floor(
+    seededRandomValue(seed, cardId) * (cardIds.length + 1),
+  );
+
+  return [
+    ...cardIds.slice(0, insertIndex),
+    cardId,
+    ...cardIds.slice(insertIndex),
+  ];
+}
+
+export function createVisualMatchingTile(
+  card: VocabularyCard,
+  side: VisualMatchingTileSide,
+): VisualMatchingTile {
+  const cardSide: CardSide = side === "dominant" ? "support" : "learning";
+
+  return {
+    cardId: card.id,
+    cardSide,
+    content: getSideContent(card, cardSide),
+    id: `${card.id}:${side}`,
+    side,
+  };
+}
+
 export function createVisualMatchingColumns(
   cards: VocabularyCard[],
   seed: string,
 ): VisualMatchingColumns {
-  const dominantSide: CardSide = "support";
-  const learningSide: CardSide = "learning";
-
-  const dominantTiles = cards.map((card) => ({
-    cardId: card.id,
-    cardSide: dominantSide,
-    content: getSideContent(card, dominantSide),
-    id: `${card.id}:dominant`,
-    side: "dominant" as const,
-  }));
-  const learningTiles = cards.map((card) => ({
-    cardId: card.id,
-    cardSide: learningSide,
-    content: getSideContent(card, learningSide),
-    id: `${card.id}:learning`,
-    side: "learning" as const,
-  }));
+  const dominantTiles = cards.map((card) =>
+    createVisualMatchingTile(card, "dominant"),
+  );
+  const learningTiles = cards.map((card) =>
+    createVisualMatchingTile(card, "learning"),
+  );
 
   return {
-    dominantTiles: shuffleTiles(dominantTiles, `${seed}:dominant`),
+    dominantTiles,
     learningTiles: shuffleTiles(learningTiles, `${seed}:learning`),
   };
 }
