@@ -10,6 +10,7 @@ import { LanguagePrompt } from "@/components/LanguagePrompt";
 import { LevelBadge } from "@/components/LevelBadge";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { playCardSideAudio } from "@/lib/card-audio";
+import { playFailureSound, playSuccessSound } from "@/lib/feedback-sounds";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { triggerHaptic } from "@/lib/haptics";
 import {
@@ -33,10 +34,14 @@ import type {
 interface OralPracticeCardProps {
   card: VocabularyCard;
   direction: PracticeDirection;
+  inputMode: OralInputMode;
+  isHandsFreeActive: boolean;
   progress: CardProgress;
+  onHandsFreeActiveChange: (isActive: boolean) => void;
   onReview: (result: ReviewResult) => void;
 }
 
+type OralInputMode = "hands_free" | "hold";
 type OralStatus = "idle" | "retry" | "success" | "fail";
 type OralPhase = "idle" | "recording" | "evaluating" | "resolved";
 type FeedbackState = "success" | "fail" | null;
@@ -49,11 +54,12 @@ const statusDotStyles: Record<OralStatus, string> = {
   success: "bg-green-400",
 };
 
-const SUCCESS_EXIT_DELAY_MS = 1250;
-const SUCCESS_ADVANCE_DELAY_MS = 2100;
+const SUCCESS_EXIT_DELAY_MS = 850;
+const SUCCESS_ADVANCE_DELAY_MS = 1400;
 const FAILED_ANSWER_REVEAL_MS = 4200;
 const FAILED_EXIT_DELAY_MS = 3100;
 const MANUAL_FAIL_DELAY_MS = 900;
+const HANDS_FREE_RESTART_DELAY_MS = 550;
 const waveformBars = [
   14, 20, 28, 18, 34, 42, 24, 38, 48, 30, 42, 54, 34, 46, 40, 24, 36, 48, 28, 40,
   30, 22,
@@ -62,13 +68,17 @@ const waveformBars = [
 export function OralPracticeCard({
   card,
   direction,
+  inputMode,
+  isHandsFreeActive,
   progress,
+  onHandsFreeActiveChange,
   onReview,
 }: OralPracticeCardProps) {
   const { config } = useLearningMode();
   const copy = config.copy;
   const reviewTimeoutRef = useRef<number | null>(null);
   const exitTimeoutRef = useRef<number | null>(null);
+  const restartTimeoutRef = useRef<number | null>(null);
   const attemptIdRef = useRef(0);
   const evaluatedAttemptIdRef = useRef<number | null>(null);
   const [activeAttemptId, setActiveAttemptId] = useState(0);
@@ -96,7 +106,11 @@ export function OralPracticeCard({
   } = useSpeechRecognition();
   const promptContent = getSideContent(card, getFirstSide(direction));
   const answerContent = getSideContent(card, getAnswerSide(direction));
-  const recognitionLanguages = getSpeechRecognitionLanguages(answerContent.language);
+  const recognitionLanguages = useMemo(
+    () => getSpeechRecognitionLanguages(answerContent.language),
+    [answerContent.language],
+  );
+  const isHandsFree = inputMode === "hands_free";
   const hasSpeechResult = Boolean(rawTranscript || transcript);
   const isRecordingActive = isPressing || isListening;
   const displayedTranscript =
@@ -109,10 +123,13 @@ export function OralPracticeCard({
             card.speechVariants,
           )
       : rawTranscript || transcript;
+  const handsFreeIdleText = isHandsFreeActive
+    ? "Microfono encendido. Di la respuesta."
+    : "Activa el microfono para practicar seguido.";
   const heardText =
     displayedTranscript ||
     (phase === "evaluating" ? copy.speech.autoValidation : "") ||
-    (isRecordingActive ? "..." : copy.speech.idle);
+    (isRecordingActive ? "..." : isHandsFree ? handsFreeIdleText : copy.speech.idle);
   const attemptFingerprint = useMemo(
     () =>
       [
@@ -147,11 +164,15 @@ export function OralPracticeCard({
     success: copy.speech.correct,
   };
   const statusText =
-    phase === "recording"
-      ? copy.speech.recording
-      : phase === "evaluating"
-        ? copy.speech.autoValidation
-        : statusCopy[status];
+    isHandsFree && !isHandsFreeActive && phase === "idle"
+      ? "Toca activar microfono"
+      : phase === "recording"
+        ? isHandsFree
+          ? "Microfono encendido"
+          : copy.speech.recording
+        : phase === "evaluating"
+          ? copy.speech.autoValidation
+          : statusCopy[status];
   const isFailAnswer = feedbackState === "fail" || status === "fail";
   const answerPanelClass = isFailAnswer
     ? "bg-red-50 ring-red-100"
@@ -176,6 +197,72 @@ export function OralPracticeCard({
       }, delay);
     },
     [onReview],
+  );
+
+  const startListeningAttempt = useCallback(() => {
+    if (!isSupported || isLocked || isListening) {
+      return false;
+    }
+
+    if (restartTimeoutRef.current) {
+      window.clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+
+    const nextAttemptId = attemptIdRef.current + 1;
+
+    attemptIdRef.current = nextAttemptId;
+    evaluatedAttemptIdRef.current = null;
+    setActiveAttemptId(nextAttemptId);
+    setFeedbackState(null);
+    setIsPressing(false);
+    setPhase("recording");
+    setSpeechMessage(null);
+    setStatus("idle");
+    resetTranscript();
+    startListening(recognitionLanguages);
+
+    return true;
+  }, [
+    isListening,
+    isLocked,
+    isSupported,
+    recognitionLanguages,
+    resetTranscript,
+    startListening,
+  ]);
+
+  const resolveSuccess = useCallback(() => {
+    setStatus("success");
+    setPhase("resolved");
+    setFeedbackState("success");
+    setIsRevealed(true);
+    setIsLocked(true);
+    stopListening();
+    playSuccessSound();
+    triggerHaptic("success");
+    exitTimeoutRef.current = window.setTimeout(() => {
+      setExitDirection("right");
+    }, SUCCESS_EXIT_DELAY_MS);
+    scheduleReview("success", SUCCESS_ADVANCE_DELAY_MS);
+  }, [scheduleReview, stopListening]);
+
+  const resolveFail = useCallback(
+    (reviewDelay = FAILED_ANSWER_REVEAL_MS, exitDelay = FAILED_EXIT_DELAY_MS) => {
+      setStatus("fail");
+      setPhase("resolved");
+      setFeedbackState("fail");
+      setIsRevealed(true);
+      setIsLocked(true);
+      stopListening();
+      playFailureSound();
+      triggerHaptic("warning");
+      exitTimeoutRef.current = window.setTimeout(() => {
+        setExitDirection("left");
+      }, exitDelay);
+      scheduleReview("fail", reviewDelay);
+    },
+    [scheduleReview, stopListening],
   );
 
   const match = useMemo(() => {
@@ -242,6 +329,11 @@ export function OralPracticeCard({
       exitTimeoutRef.current = null;
     }
 
+    if (restartTimeoutRef.current) {
+      window.clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+
     attemptIdRef.current = 0;
     evaluatedAttemptIdRef.current = null;
     setActiveAttemptId(0);
@@ -266,6 +358,10 @@ export function OralPracticeCard({
 
       if (exitTimeoutRef.current) {
         window.clearTimeout(exitTimeoutRef.current);
+      }
+
+      if (restartTimeoutRef.current) {
+        window.clearTimeout(restartTimeoutRef.current);
       }
     },
     [],

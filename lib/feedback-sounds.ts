@@ -51,3 +51,31 @@ export function playFailureSound(): void {
   oscillator.start(now);
   oscillator.stop(now + 0.21);
 }
+
+export function playSuccessSound(): void {
+  const audioContext = getAudioContext();
+
+  if (!audioContext) {
+    return;
+  }
+
+  void audioContext.resume().catch(() => undefined);
+
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  const now = audioContext.currentTime;
+
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(560, now);
+  oscillator.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+  oscillator.frequency.exponentialRampToValueAtTime(1180, now + 0.16);
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.18, now + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.25);
+}
