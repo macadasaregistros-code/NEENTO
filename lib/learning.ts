@@ -212,7 +212,7 @@ export const modeConfigs: Record<LearningMode, ModeConfig> = {
       home: {
         cards: "tarjetas",
         description:
-          "Practica palabras y frases utiles con sesiones cortas para movil.",
+          "Practica palabras y frases utiles con repeticion espaciada",
         modeLabel: "Daiki",
         oral: "oral",
         pendingToday: "Pendientes hoy",
