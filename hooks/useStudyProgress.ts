@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
+import {
+  getPersonaForEmail,
+  getPersonaForMode,
+  type AppPersona,
+} from "@/lib/app-persona";
 import { mockCards, mockProgress } from "@/lib/mock-data";
 import {
   createInitialProgress,
@@ -12,8 +17,10 @@ import {
 } from "@/lib/srs";
 import {
   createSupabaseCard,
+  fetchAppProfiles,
   fetchSupabaseStudyData,
   saveSupabaseProgress,
+  type AppProfile,
 } from "@/lib/supabase-data";
 import { supabase } from "@/lib/supabase";
 import type {
@@ -34,6 +41,10 @@ type SupabaseLikeError = {
   hint?: string;
   message?: string;
 };
+
+function getProgressStorageKey(persona: AppPersona): string {
+  return `${STORAGE_KEY_PREFIX}:${persona}`;
+}
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -128,13 +139,15 @@ function mergeProgressForCards(
   );
 }
 
-function readStoredProgress(): CardProgress[] {
+function readStoredProgress(persona: AppPersona): CardProgress[] {
   if (typeof window === "undefined") {
     return mockProgress;
   }
 
   try {
-    const rawValue = window.localStorage.getItem(STORAGE_KEY_PREFIX);
+    const rawValue =
+      window.localStorage.getItem(getProgressStorageKey(persona)) ??
+      window.localStorage.getItem(STORAGE_KEY_PREFIX);
 
     if (!rawValue) {
       return mockProgress;
@@ -226,19 +239,24 @@ async function syncLocalCardsToSupabase(
 
 export function useStudyProgress() {
   const { config, mode } = useLearningMode();
+  const targetPersona = getPersonaForMode(mode);
   const [allCards, setAllCards] = useState<VocabularyCard[]>(mockCards);
+  const [canMutateActiveMode, setCanMutateActiveMode] = useState(false);
+  const [currentPersona, setCurrentPersona] = useState<AppPersona | null>(null);
   const [progressList, setProgressList] = useState<CardProgress[]>(() =>
     mergeProgressForCards(mockCards, mockProgress),
   );
   const [dataSource, setDataSource] = useState<DataSource>("local");
   const [isHydrated, setIsHydrated] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [targetProfile, setTargetProfile] = useState<AppProfile | null>(null);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     const storedCards = readStoredCards();
-    const storedProgress = readStoredProgress();
+    const storedProgress = readStoredProgress(targetPersona);
     const localCards = mergeCards(mockCards, storedCards);
 
     setAllCards(localCards);
@@ -246,6 +264,11 @@ export function useStudyProgress() {
     setDataSource("local");
     setIsHydrated(true);
     setSyncError(null);
+    setCanMutateActiveMode(false);
+    setCurrentPersona(null);
+    setTargetProfile(null);
+    setTargetUserId(null);
+    setUserId(null);
 
     async function loadSupabaseData() {
       const { data, error } = await supabase.auth.getUser();
@@ -254,22 +277,66 @@ export function useStudyProgress() {
         throw error ?? new Error("Missing Supabase user.");
       }
 
-      setUserId(data.user.id);
+      const appProfiles = await fetchAppProfiles();
+      const currentProfile = appProfiles.find((profile) => profile.id === data.user.id);
+      const resolvedCurrentPersona =
+        currentProfile?.appPersona ?? getPersonaForEmail(data.user.email);
 
-      const syncedLocalCards = await syncLocalCardsToSupabase(storedCards, data.user.id);
-      const studyData = await fetchSupabaseStudyData(data.user.id);
+      if (!resolvedCurrentPersona) {
+        throw new Error("Cuenta no autorizada para Neento.");
+      }
+
+      const resolvedTargetProfile =
+        appProfiles.find((profile) => profile.appPersona === targetPersona) ?? null;
+      const resolvedTargetUserId =
+        resolvedTargetProfile?.id ??
+        (resolvedCurrentPersona === targetPersona ? data.user.id : null);
+
+      if (!resolvedTargetUserId) {
+        throw new Error("No se encontro el perfil del modo seleccionado.");
+      }
+
+      const canMutate =
+        resolvedCurrentPersona === targetPersona &&
+        resolvedTargetUserId === data.user.id;
+
+      const syncedLocalCards = canMutate
+        ? await syncLocalCardsToSupabase(storedCards, data.user.id)
+        : { failedCards: [], syncedCards: [] };
+      const studyData = await fetchSupabaseStudyData(resolvedTargetUserId);
 
       return {
+        canMutate,
+        currentPersona: resolvedCurrentPersona,
         ...syncedLocalCards,
         studyData,
+        targetProfile: resolvedTargetProfile,
+        targetUserId: resolvedTargetUserId,
+        userId: data.user.id,
       };
     }
 
     loadSupabaseData()
-      .then(({ failedCards, studyData, syncedCards }) => {
+      .then(
+        ({
+          canMutate,
+          currentPersona: resolvedCurrentPersona,
+          failedCards,
+          studyData,
+          syncedCards,
+          targetProfile: resolvedTargetProfile,
+          targetUserId: resolvedTargetUserId,
+          userId: resolvedUserId,
+        }) => {
         if (!isMounted) {
           return;
         }
+
+        setCanMutateActiveMode(canMutate);
+        setCurrentPersona(resolvedCurrentPersona);
+        setTargetProfile(resolvedTargetProfile);
+        setTargetUserId(resolvedTargetUserId);
+        setUserId(resolvedUserId);
 
         if (!studyData) {
           setSyncError(config.copy.sync.supabaseEmpty);
@@ -297,6 +364,10 @@ export function useStudyProgress() {
         setAllCards(localCards);
         setProgressList(mergeProgressForCards(localCards, mockProgress, storedProgress));
         setDataSource("local");
+        setCanMutateActiveMode(false);
+        setCurrentPersona(null);
+        setTargetProfile(null);
+        setTargetUserId(null);
         setUserId(null);
         setSyncError(config.copy.sync.supabaseFailed);
       });
@@ -304,15 +375,18 @@ export function useStudyProgress() {
     return () => {
       isMounted = false;
     };
-  }, [config.copy.sync]);
+  }, [config.copy.sync, targetPersona]);
 
   useEffect(() => {
     if (!isHydrated) {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_KEY_PREFIX, JSON.stringify(progressList));
-  }, [isHydrated, progressList]);
+    window.localStorage.setItem(
+      getProgressStorageKey(targetPersona),
+      JSON.stringify(progressList),
+    );
+  }, [isHydrated, progressList, targetPersona]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -349,6 +423,10 @@ export function useStudyProgress() {
 
   const reviewCard = useCallback(
     (cardId: string, reviewMode: ReviewMode, result: ReviewResult) => {
+      if (!canMutateActiveMode || !userId || targetUserId !== userId) {
+        return;
+      }
+
       const currentProgress =
         progressByCardId.get(cardId) ?? createInitialProgress(cardId);
       const updatedProgress = updateProgress(currentProgress, reviewMode, result);
@@ -371,10 +449,20 @@ export function useStudyProgress() {
         });
       }
     },
-    [config.copy.sync.saveFailed, progressByCardId, userId],
+    [
+      canMutateActiveMode,
+      config.copy.sync.saveFailed,
+      progressByCardId,
+      targetUserId,
+      userId,
+    ],
   );
 
   const resetProgress = useCallback(() => {
+    if (!canMutateActiveMode) {
+      return;
+    }
+
     const resetList = cards.map((card) => createInitialProgress(card.id));
 
     setProgressList((current) => {
@@ -382,12 +470,14 @@ export function useStudyProgress() {
 
       return current.map((progress) => resetByCardId.get(progress.cardId) ?? progress);
     });
-  }, [cards]);
+  }, [canMutateActiveMode, cards]);
 
   const createCard = useCallback(
     async (input: NewVocabularyCardInput) => {
-      if (!userId) {
-        throw new Error("No hay sesion activa de Supabase. Vuelve a iniciar sesion.");
+      if (!canMutateActiveMode || !userId || targetUserId !== userId) {
+        throw new Error(
+          "Este modo es solo practica sin guardar para esta cuenta.",
+        );
       }
 
       let createdCard: VocabularyCard;
@@ -432,7 +522,14 @@ export function useStudyProgress() {
 
       return createdCard;
     },
-    [allCards, config.copy.sync.saveFailed, config.copy.sync.supabaseFailed, userId],
+    [
+      allCards,
+      canMutateActiveMode,
+      config.copy.sync.saveFailed,
+      config.copy.sync.supabaseFailed,
+      targetUserId,
+      userId,
+    ],
   );
 
   const visualDueCards = useMemo(
@@ -446,16 +543,22 @@ export function useStudyProgress() {
   );
 
   return {
+    canMutateActiveMode,
     cards,
     createCard,
+    currentPersona,
     dataSource,
     getProgress,
     isHydrated,
+    isReadOnlyMode: !canMutateActiveMode,
     oralDueCards,
     progressList: visibleProgressList,
     resetProgress,
     reviewCard,
     syncError,
+    targetPersona,
+    targetProfile,
+    targetUserId,
     userId,
     visualDueCards,
   };

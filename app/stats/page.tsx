@@ -93,8 +93,15 @@ function getAverageLevel(
 export default function StatsPage() {
   const { config, mode } = useLearningMode();
   const copy = config.copy;
-  const { cards, getProgress, oralDueCards, progressList, visualDueCards } =
-    useStudyProgress();
+  const {
+    cards,
+    getProgress,
+    isReadOnlyMode,
+    oralDueCards,
+    progressList,
+    targetProfile,
+    visualDueCards,
+  } = useStudyProgress();
   const { isOwner } = useCurrentUser();
   const { recordsByCardId } = useJjuAudioRecords();
   const [expandedStatus, setExpandedStatus] = useState<CardStatus | null>(null);
@@ -209,6 +216,13 @@ export default function StatsPage() {
           </div>
         </div>
       </section>
+
+      {isReadOnlyMode ? (
+        <p className="rounded-lg bg-white/90 px-4 py-3 text-sm font-bold leading-5 text-slate-500 shadow-sm ring-1 ring-white">
+          Estadisticas de {targetProfile?.fullName || config.label}. Practicar
+          este modo desde esta cuenta no guarda cambios.
+        </p>
+      ) : null}
 
       <section className="grid grid-cols-2 gap-3">
         <StatCard icon={<Layers3 size={20} />} label={copy.home.cards} value={cards.length} />

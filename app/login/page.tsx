@@ -1,32 +1,23 @@
 "use client";
 
-import { Eye, EyeOff, LockKeyhole, Mail, User } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 
 import { useLearningMode } from "@/hooks/useLearningMode";
+import { getPersonaForEmail } from "@/lib/app-persona";
 import { createClient } from "@/src/lib/supabase/client";
 
-type AuthMode = "login" | "signup";
-
 const authText = {
-  checkConfirmationEmail:
-    "Cuenta creada. Revisa tu correo y confirma tu email para poder entrar.",
-  confirmationHelp: "Si no llega, revisa spam o promociones.",
-  createAccount: "Crear cuenta",
   email: "Correo",
-  fullName: "Nombre completo",
   loginDescription:
-    "Usa correo y contrasena. Tu progreso, tus palabras y tus audios quedan ligados a tu cuenta.",
+    "Usa la cuenta autorizada de Daiki o Jju. Tu progreso queda separado por modo.",
   loginTitle: "Entrar",
   password: "Contrasena",
   passwordAccountHelp:
     "Si antes usabas magic link y nunca creaste contrasena, esa cuenta puede necesitar una contrasena nueva.",
   signInCta: "Entrar",
-  signUpCta: "Crear cuenta",
-  switchToLogin: "Ya tengo cuenta",
-  switchToSignup: "Crear cuenta nueva",
 };
 
 export default function LoginPage() {
@@ -41,78 +32,39 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { mode } = useLearningMode();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
   const [message, setMessage] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const isSignup = authMode === "signup";
   const isJju = mode === "ko_es";
   const accentClass = isJju ? "bg-sky-600 shadow-sky-100" : "bg-emerald-600 shadow-emerald-100";
   const ringClass = isJju ? "focus-within:ring-sky-300" : "focus-within:ring-emerald-300";
-  const title = isSignup ? authText.createAccount : authText.loginTitle;
-  const submitLabel = isLoading
-    ? "Procesando..."
-    : isSignup
-      ? authText.signUpCta
-      : authText.signInCta;
-  const toggleLabel = isSignup ? authText.switchToLogin : authText.switchToSignup;
-  const authDescription = useMemo(
-    () =>
-      isSignup
-        ? "Crea tu cuenta para guardar progreso, palabras propias y administrar audios cuando tengas permisos."
-        : authText.loginDescription,
-    [isSignup],
-  );
+  const submitLabel = isLoading ? "Procesando..." : authText.signInCta;
+  const title = authText.loginTitle;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
     setMessage("");
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!getPersonaForEmail(normalizedEmail)) {
+      setIsLoading(false);
+      setMessage("Esta app solo permite las cuentas de Daiki y Jju.");
+      return;
+    }
+
     const supabase = createClient();
-    const result = isSignup
-      ? await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName.trim(),
-            },
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-              redirectTo,
-            )}`,
-          },
-        })
-      : await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+    const result = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
 
     if (result.error) {
       setIsLoading(false);
       setMessage(result.error.message);
-      return;
-    }
-
-    if (isSignup && !result.data.session) {
-      const signInResult = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      setIsLoading(false);
-
-      if (signInResult.error) {
-        setMessage(
-          "La cuenta se creo, pero no se pudo iniciar sesion automaticamente. Intenta entrar con la misma contrasena.",
-        );
-        return;
-      }
-
-      window.location.replace(redirectTo);
       return;
     }
 
@@ -133,29 +85,14 @@ function LoginForm() {
           </p>
           <h1 className="mt-2 text-4xl font-black leading-none text-ink">{title}</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">
-            {authDescription}
+            {authText.loginDescription}
           </p>
-          {!isSignup ? (
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-400">
-              {authText.passwordAccountHelp}
-            </p>
-          ) : null}
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-400">
+            {authText.passwordAccountHelp}
+          </p>
         </div>
 
         <form className="grid gap-3" onSubmit={handleSubmit}>
-          {isSignup ? (
-            <AuthField
-              autoComplete="name"
-              icon={<User aria-hidden="true" size={18} />}
-              label={authText.fullName}
-              onChange={setFullName}
-              placeholder={authText.fullName}
-              required
-              ringClass={ringClass}
-              value={fullName}
-            />
-          ) : null}
-
           <AuthField
             autoComplete="email"
             icon={<Mail aria-hidden="true" size={18} />}
@@ -177,7 +114,7 @@ function LoginForm() {
             <span className="flex items-center gap-3">
               <LockKeyhole aria-hidden="true" className="text-slate-400" size={18} />
               <input
-                autoComplete={isSignup ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 className="h-8 min-w-0 flex-1 bg-transparent text-sm font-bold text-ink outline-none placeholder:text-slate-400"
                 minLength={6}
                 onChange={(event) => setPassword(event.target.value)}
@@ -215,17 +152,6 @@ function LoginForm() {
             {submitLabel}
           </button>
         </form>
-
-        <button
-          className="mt-3 flex h-12 w-full items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-600 transition active:scale-[0.98]"
-          onClick={() => {
-            setAuthMode((current) => (current === "login" ? "signup" : "login"));
-            setMessage("");
-          }}
-          type="button"
-        >
-          {toggleLabel}
-        </button>
       </section>
     </div>
   );

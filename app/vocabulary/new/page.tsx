@@ -37,7 +37,14 @@ export default function NewVocabularyPage() {
   const router = useRouter();
   const { config, mode } = useLearningMode();
   const copy = config.copy;
-  const { cards, createCard, isHydrated, userId } = useStudyProgress();
+  const {
+    canMutateActiveMode,
+    cards,
+    createCard,
+    isHydrated,
+    targetProfile,
+    userId,
+  } = useStudyProgress();
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [error, setError] = useState<string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -45,7 +52,7 @@ export default function NewVocabularyPage() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const isJapaneseMode = mode === "ja_es";
   const isJju = mode === "ko_es";
-  const canSave = isHydrated && Boolean(userId) && !isSaving;
+  const canSave = isHydrated && Boolean(userId) && canMutateActiveMode && !isSaving;
   const accentClass = isJju
     ? "bg-sky-600 shadow-sky-100 focus:border-sky-500"
     : "bg-emerald-600 shadow-emerald-100 focus:border-emerald-500";
@@ -137,6 +144,11 @@ export default function NewVocabularyPage() {
     event.preventDefault();
     setError(null);
 
+    if (!canMutateActiveMode) {
+      setError("Este modo es solo practica sin guardar para esta cuenta.");
+      return;
+    }
+
     const category = getCategory();
 
     if (!category) {
@@ -164,6 +176,44 @@ export default function NewVocabularyPage() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (isHydrated && !canMutateActiveMode) {
+    return (
+      <div className="flex flex-1 flex-col gap-5">
+        <header className="flex items-center justify-between pt-2">
+          <Link
+            aria-label="Volver a vocabulario"
+            className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-ink shadow-sm ring-1 ring-slate-200"
+            href="/vocabulary"
+          >
+            <ArrowLeft aria-hidden="true" size={21} />
+          </Link>
+          <div className="text-right">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+              {config.label}
+            </p>
+            <h1 className="text-2xl font-black text-ink">Solo practica</h1>
+          </div>
+        </header>
+
+        <section className="rounded-lg bg-white p-5 shadow-soft">
+          <p className="text-lg font-black text-ink">
+            No se pueden crear tarjetas en este modo
+          </p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+            Estas viendo el modo de {targetProfile?.fullName || config.label}.
+            Puedes practicarlo sin guardar cambios en su progreso.
+          </p>
+          <Link
+            className="mt-5 flex h-12 items-center justify-center rounded-lg bg-ink px-4 text-sm font-black text-white shadow-soft"
+            href="/vocabulary"
+          >
+            Volver
+          </Link>
+        </section>
+      </div>
+    );
   }
 
   return (

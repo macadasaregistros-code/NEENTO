@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { AppPersona } from "@/lib/app-persona";
 import { getJapaneseRecognitionVariants } from "@/lib/japanese-recognition";
 import { romajiToHiragana } from "@/lib/speech";
 import { createInitialProgress, normalizeProgress } from "@/lib/srs";
@@ -61,6 +62,22 @@ interface CardProgressRow {
 interface StudyData {
   cards: VocabularyCard[];
   progressList: CardProgress[];
+}
+
+type ProfileRole = "owner" | "worker";
+
+interface AppProfileRow {
+  app_persona: AppPersona | null;
+  full_name: string | null;
+  id: string;
+  role_global: ProfileRole | null;
+}
+
+export interface AppProfile {
+  appPersona: AppPersona;
+  fullName: string;
+  id: string;
+  roleGlobal: ProfileRole;
 }
 
 async function attachJjuAudio(cards: VocabularyCard[]): Promise<VocabularyCard[]> {
@@ -197,39 +214,56 @@ function toProgressPayload(progress: CardProgress, userId: string) {
   };
 }
 
-export async function fetchSupabaseStudyData(userId?: string): Promise<StudyData | null> {
-  const { data: cardRows, error: cardsError } = await supabase
+function toAppProfile(row: AppProfileRow): AppProfile | null {
+  if (!row.app_persona) {
+    return null;
+  }
+
+  return {
+    appPersona: row.app_persona,
+    fullName: row.full_name ?? "",
+    id: row.id,
+    roleGlobal: row.role_global ?? "worker",
+  };
+}
+
+export async function fetchAppProfiles(): Promise<AppProfile[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, role_global, app_persona")
+    .in("app_persona", ["daiki", "jju"]);
+
+  if (error || !data) {
+    return [];
+  }
+
+  return ((data ?? []) as AppProfileRow[])
+    .map(toAppProfile)
+    .filter((profile): profile is AppProfile => Boolean(profile));
+}
+
+export async function fetchSupabaseStudyData(
+  targetUserId?: string,
+): Promise<StudyData | null> {
+  let cardsQuery = supabase
     .from("cards")
     .select("*")
     .order("is_starter", { ascending: false })
     .order("created_at", { ascending: true });
 
+  if (targetUserId) {
+    cardsQuery = cardsQuery.or(`is_starter.eq.true,user_id.eq.${targetUserId}`);
+  }
+
+  const { data: cardRows, error: cardsError } = await cardsQuery;
+
   if (cardsError || !cardRows || cardRows.length === 0) {
     return null;
   }
 
-  let mergedCardRows = cardRows as CardRow[];
+  const cards = await attachJjuAudio((cardRows as CardRow[]).map(toVocabularyCard));
 
-  if (userId) {
-    const { data: userCardRows } = await supabase
-      .from("cards")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
-
-    const rowsById = new Map(
-      [...mergedCardRows, ...((userCardRows ?? []) as CardRow[])].map((row) => [
-        row.id,
-        row,
-      ]),
-    );
-
-    mergedCardRows = [...rowsById.values()];
-  }
-
-  const cards = await attachJjuAudio(mergedCardRows.map(toVocabularyCard));
-
-  if (!userId) {
+  if (!targetUserId) {
     return {
       cards,
       progressList: cards.map((card) => createInitialProgress(card.id)),
@@ -239,12 +273,12 @@ export async function fetchSupabaseStudyData(userId?: string): Promise<StudyData
   const { data: progressRows, error: progressError } = await supabase
     .from("card_progress")
     .select("*")
-    .eq("user_id", userId);
+    .eq("user_id", targetUserId);
 
   if (progressError) {
     return {
       cards,
-      progressList: cards.map((card) => createInitialProgress(card.id, userId)),
+      progressList: cards.map((card) => createInitialProgress(card.id, targetUserId)),
     };
   }
 
@@ -259,7 +293,7 @@ export async function fetchSupabaseStudyData(userId?: string): Promise<StudyData
     cards,
     progressList: cards.map(
       (card) =>
-        progressByCardId.get(card.id) ?? createInitialProgress(card.id, userId),
+        progressByCardId.get(card.id) ?? createInitialProgress(card.id, targetUserId),
     ),
   };
 }

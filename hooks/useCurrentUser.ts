@@ -3,24 +3,28 @@
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 
+import { getPersonaForEmail, type AppPersona } from "@/lib/app-persona";
 import { supabase } from "@/lib/supabase";
 
 export type ProfileRole = "owner" | "worker";
 
 export interface CurrentProfile {
+  appPersona: AppPersona | null;
   fullName: string;
   id: string;
   roleGlobal: ProfileRole;
 }
 
 interface ProfileRow {
+  app_persona: AppPersona | null;
   full_name: string | null;
   id: string;
   role_global: ProfileRole | null;
 }
 
-function mapProfile(row: ProfileRow): CurrentProfile {
+function mapProfile(row: ProfileRow, fallbackEmail?: string | null): CurrentProfile {
   return {
+    appPersona: row.app_persona ?? getPersonaForEmail(fallbackEmail),
     fullName: row.full_name ?? "",
     id: row.id,
     roleGlobal: row.role_global ?? "worker",
@@ -54,7 +58,7 @@ export function useCurrentUser() {
 
     const { data, error: profileError } = await supabase
       .from("profiles")
-      .select("id, full_name, role_global")
+      .select("id, full_name, role_global, app_persona")
       .eq("id", nextUser.id)
       .maybeSingle();
 
@@ -66,7 +70,7 @@ export function useCurrentUser() {
     }
 
     if (data) {
-      setProfile(mapProfile(data as ProfileRow));
+      setProfile(mapProfile(data as ProfileRow, nextUser.email));
       setIsLoading(false);
       return;
     }
@@ -81,7 +85,7 @@ export function useCurrentUser() {
       return;
     }
 
-    setProfile(mapProfile(ensuredProfile as ProfileRow));
+    setProfile(mapProfile(ensuredProfile as ProfileRow, nextUser.email));
     setIsLoading(false);
   }, []);
 
@@ -113,6 +117,7 @@ export function useCurrentUser() {
 
   return {
     error,
+    isAllowedAppUser: Boolean(profile?.appPersona),
     isLoading,
     isOwner: profile?.roleGlobal === "owner",
     profile,

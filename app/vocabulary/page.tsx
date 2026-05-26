@@ -55,7 +55,7 @@ export default function VocabularyPage() {
 function VocabularyContent() {
   const { config, mode } = useLearningMode();
   const copy = config.copy;
-  const { cards, getProgress } = useStudyProgress();
+  const { canMutateActiveMode, cards, getProgress } = useStudyProgress();
   const searchParams = useSearchParams();
   const statusParam = searchParams.get("status");
   const sourceParam = searchParams.get("source");
@@ -145,13 +145,19 @@ function VocabularyContent() {
               {copy.home.cards} / {userCardCount} {copy.common.userOwned}
             </p>
           </div>
-          <Link
-            className={`flex h-12 items-center gap-2 rounded-lg px-4 text-sm font-black text-white shadow-lg transition active:scale-[0.98] ${addButtonClass}`}
-            href="/vocabulary/new"
-          >
-            <Plus aria-hidden="true" size={19} />
-            {copy.common.add}
-          </Link>
+          {canMutateActiveMode ? (
+            <Link
+              className={`flex h-12 items-center gap-2 rounded-lg px-4 text-sm font-black text-white shadow-lg transition active:scale-[0.98] ${addButtonClass}`}
+              href="/vocabulary/new"
+            >
+              <Plus aria-hidden="true" size={19} />
+              {copy.common.add}
+            </Link>
+          ) : (
+            <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+              solo lectura
+            </span>
+          )}
         </div>
       </section>
 

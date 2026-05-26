@@ -21,7 +21,14 @@ import type { PracticeDirection, ReviewResult } from "@/types/card";
 export default function VisualPracticePage() {
   const { config, mode } = useLearningMode();
   const copy = config.copy.practice;
-  const { cards, getProgress, reviewCard, visualDueCards } = useStudyProgress();
+  const {
+    cards,
+    getProgress,
+    isReadOnlyMode,
+    reviewCard,
+    targetProfile,
+    visualDueCards,
+  } = useStudyProgress();
   const [feedback, setFeedback] = useState<ReviewResult | null>(null);
   const [direction, setDirection] = useState<PracticeDirection>(
     config.defaultVisualDirection,
@@ -140,6 +147,13 @@ export default function VisualPracticePage() {
           </p>
         </div>
       </header>
+
+      {isReadOnlyMode ? (
+        <p className="rounded-lg bg-white/90 px-3 py-2 text-xs font-bold leading-5 text-slate-500 shadow-sm ring-1 ring-white">
+          Practica sin guardar cambios en el progreso de{" "}
+          {targetProfile?.fullName || config.label}.
+        </p>
+      ) : null}
 
       {feedback ? (
         <div

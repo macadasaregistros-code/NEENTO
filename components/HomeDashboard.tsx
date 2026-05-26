@@ -14,8 +14,10 @@ export default function HomePage() {
   const copy = config.copy.home;
   const {
     cards,
+    isReadOnlyMode,
     oralDueCards,
     progressList,
+    targetProfile,
     visualDueCards,
   } = useStudyProgress();
   const reviewedCount = progressList.filter(
@@ -62,6 +64,13 @@ export default function HomePage() {
       </header>
 
       <LearningModeSelector />
+
+      {isReadOnlyMode ? (
+        <p className="rounded-lg bg-white/90 px-4 py-3 text-sm font-bold leading-5 text-slate-500 shadow-sm ring-1 ring-white">
+          Viendo el progreso de {targetProfile?.fullName || config.label}. Puedes
+          practicar este modo sin guardar cambios.
+        </p>
+      ) : null}
 
       <section className="rounded-lg bg-white p-4 shadow-soft">
         <p className="text-center text-sm font-bold text-slate-500">{copy.pendingToday}</p>
