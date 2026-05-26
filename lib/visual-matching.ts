@@ -1,15 +1,10 @@
-import {
-  getAnswerSide,
-  getFirstSide,
-  getSideContent,
-  type CardSide,
-  type SideContent,
-} from "@/lib/learning";
-import type { PracticeDirection, VocabularyCard } from "@/types/card";
+import { getSideContent, type CardSide, type SideContent } from "@/lib/learning";
+import type { VocabularyCard } from "@/types/card";
 
-export const VISUAL_MATCHING_PAIR_COUNT = 5;
+export const VISUAL_MATCHING_PAIR_COUNT = 6;
+export const VISUAL_MATCHING_DECK_COUNT = VISUAL_MATCHING_PAIR_COUNT * 3;
 
-export type VisualMatchingTileSide = "prompt" | "answer";
+export type VisualMatchingTileSide = "dominant" | "learning";
 
 export interface VisualMatchingTile {
   cardId: string;
@@ -17,6 +12,11 @@ export interface VisualMatchingTile {
   content: SideContent;
   id: string;
   side: VisualMatchingTileSide;
+}
+
+export interface VisualMatchingColumns {
+  dominantTiles: VisualMatchingTile[];
+  learningTiles: VisualMatchingTile[];
 }
 
 function seededRandomValue(seed: string, value: string): number {
@@ -31,31 +31,8 @@ function seededRandomValue(seed: string, value: string): number {
   return (hash >>> 0) / 4294967295;
 }
 
-export function createVisualMatchingTiles(
-  cards: VocabularyCard[],
-  direction: PracticeDirection,
-  seed: string,
-): VisualMatchingTile[] {
-  const promptSide = getFirstSide(direction);
-  const answerSide = getAnswerSide(direction);
-
-  return cards
-    .flatMap((card) => [
-      {
-        cardId: card.id,
-        cardSide: promptSide,
-        content: getSideContent(card, promptSide),
-        id: `${card.id}:prompt`,
-        side: "prompt" as const,
-      },
-      {
-        cardId: card.id,
-        cardSide: answerSide,
-        content: getSideContent(card, answerSide),
-        id: `${card.id}:answer`,
-        side: "answer" as const,
-      },
-    ])
+function shuffleTiles(tiles: VisualMatchingTile[], seed: string): VisualMatchingTile[] {
+  return [...tiles]
     .sort((leftTile, rightTile) => {
       const randomDifference =
         seededRandomValue(seed, leftTile.id) -
@@ -67,4 +44,32 @@ export function createVisualMatchingTiles(
 
       return leftTile.id.localeCompare(rightTile.id);
     });
+}
+
+export function createVisualMatchingColumns(
+  cards: VocabularyCard[],
+  seed: string,
+): VisualMatchingColumns {
+  const dominantSide: CardSide = "support";
+  const learningSide: CardSide = "learning";
+
+  const dominantTiles = cards.map((card) => ({
+    cardId: card.id,
+    cardSide: dominantSide,
+    content: getSideContent(card, dominantSide),
+    id: `${card.id}:dominant`,
+    side: "dominant" as const,
+  }));
+  const learningTiles = cards.map((card) => ({
+    cardId: card.id,
+    cardSide: learningSide,
+    content: getSideContent(card, learningSide),
+    id: `${card.id}:learning`,
+    side: "learning" as const,
+  }));
+
+  return {
+    dominantTiles: shuffleTiles(dominantTiles, `${seed}:dominant`),
+    learningTiles: shuffleTiles(learningTiles, `${seed}:learning`),
+  };
 }

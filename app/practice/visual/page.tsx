@@ -17,7 +17,10 @@ import {
   orderDueCards,
   orderPracticeCards,
 } from "@/lib/practice-order";
-import { VISUAL_MATCHING_PAIR_COUNT } from "@/lib/visual-matching";
+import {
+  VISUAL_MATCHING_DECK_COUNT,
+  VISUAL_MATCHING_PAIR_COUNT,
+} from "@/lib/visual-matching";
 import type { PracticeDirection, ReviewResult, VocabularyCard } from "@/types/card";
 
 type VisualPracticeActivity = "cards" | "pairs";
@@ -71,11 +74,11 @@ export default function VisualPracticePage() {
   const dueCurrent = unreviewedDueCards[0];
   const freeCurrentCard = orderedFreePracticeCards[freePracticeIndex];
   const matchingDueCards = unreviewedDueCards
-    .slice(0, VISUAL_MATCHING_PAIR_COUNT)
+    .slice(0, VISUAL_MATCHING_DECK_COUNT)
     .map(({ card }) => card);
   const matchingFreeCards = orderedFreePracticeCards.slice(
     freePracticeIndex,
-    freePracticeIndex + VISUAL_MATCHING_PAIR_COUNT,
+    freePracticeIndex + VISUAL_MATCHING_DECK_COUNT,
   );
   const matchingRoundCards = isFreePractice ? matchingFreeCards : matchingDueCards;
   const current = isFreePractice
@@ -91,7 +94,11 @@ export default function VisualPracticePage() {
     freePracticeTotal === 0
       ? 0
       : activity === "pairs"
-        ? Math.min(freePracticeIndex + matchingRoundCards.length, freePracticeTotal)
+        ? Math.min(
+            freePracticeIndex +
+              Math.min(VISUAL_MATCHING_PAIR_COUNT, matchingRoundCards.length),
+            freePracticeTotal,
+          )
         : Math.min(freePracticeIndex + 1, freePracticeTotal);
   const pendingLabel = isFreePractice
     ? `${freePracticePosition}/${freePracticeTotal} ${config.copy.common.free}`
@@ -175,9 +182,14 @@ export default function VisualPracticePage() {
       return nextIds;
     });
 
-    matchedCards.forEach((card) => {
-      reviewCard(card.id, "visual", "success");
-    });
+  }
+
+  function handleMatchingCardMatched(card: VocabularyCard) {
+    if (isFreePractice) {
+      return;
+    }
+
+    reviewCard(card.id, "visual", "success");
   }
 
   function startFreePractice() {
@@ -265,10 +277,10 @@ export default function VisualPracticePage() {
       {activity === "pairs" && matchingRoundCards.length > 0 ? (
         <VisualMatchingBoard
           cards={matchingRoundCards}
-          direction={direction}
           key={`${sessionSeed}-${direction}-${selectedCategory}-${
             isFreePractice ? `free-${freePracticeIndex}` : "due"
           }-${matchingRoundCards.map((card) => card.id).join("|")}`}
+          onCardMatched={handleMatchingCardMatched}
           onRoundComplete={handleMatchingRoundComplete}
           seed={`${sessionSeed}:${freePracticeIndex}:${reviewedSessionCardIds.size}`}
         />

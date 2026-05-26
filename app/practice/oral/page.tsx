@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, Hand, Mic, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -17,6 +17,13 @@ import {
   orderPracticeCards,
 } from "@/lib/practice-order";
 import type { PracticeDirection, ReviewResult } from "@/types/card";
+
+type OralPracticeActivity = "hands_free" | "hold";
+
+const oralPracticeActivityOptions = [
+  { icon: Mic, label: "Automatico", value: "hands_free" },
+  { icon: Hand, label: "Mantener", value: "hold" },
+] as const;
 
 export default function OralPracticePage() {
   const { config, mode } = useLearningMode();
@@ -35,6 +42,8 @@ export default function OralPracticePage() {
   );
   const [sessionSeed, setSessionSeed] = useState("initial");
   const [isFreePractice, setIsFreePractice] = useState(false);
+  const [activity, setActivity] = useState<OralPracticeActivity>("hands_free");
+  const [isHandsFreeActive, setIsHandsFreeActive] = useState(false);
   const [freePracticeIndex, setFreePracticeIndex] = useState(0);
   const [reviewedSessionCardIds, setReviewedSessionCardIds] = useState<Set<string>>(
     () => new Set(),
@@ -55,9 +64,10 @@ export default function OralPracticePage() {
   );
   const orderedDueCards = orderDueCards(filteredOralDueCards, sessionSeed);
   const orderedFreePracticeCards = orderPracticeCards(filteredCards, sessionSeed);
-  const dueCurrent = orderedDueCards.find(
+  const unreviewedDueCards = orderedDueCards.filter(
     ({ card }) => !reviewedSessionCardIds.has(card.id),
   );
+  const dueCurrent = unreviewedDueCards[0];
   const freeCurrentCard = orderedFreePracticeCards[freePracticeIndex];
   const current = isFreePractice
     ? freeCurrentCard
@@ -67,15 +77,20 @@ export default function OralPracticePage() {
         }
       : undefined
     : dueCurrent;
+  const currentCardId = current?.card.id;
   const freePracticeTotal = filteredCards.length;
   const pendingLabel = isFreePractice
     ? `${freePracticeTotal === 0 ? 0 : Math.min(freePracticeIndex + 1, freePracticeTotal)}/${freePracticeTotal} ${config.copy.common.free}`
-    : `${filteredOralDueCards.length} ${copy.pending}`;
+    : `${unreviewedDueCards.length} ${copy.pending}`;
+  const activityAccentClass =
+    mode === "ko_es" ? "bg-sky-600 text-white" : "bg-emerald-600 text-white";
 
   useEffect(() => {
     setDirection(config.defaultOralDirection);
     setSessionSeed(createPracticeSessionSeed());
     setIsFreePractice(false);
+    setActivity("hands_free");
+    setIsHandsFreeActive(false);
     setFreePracticeIndex(0);
     setReviewedSessionCardIds(new Set());
   }, [config.defaultOralDirection, mode]);
@@ -84,6 +99,7 @@ export default function OralPracticePage() {
     setFeedback(null);
     setSessionSeed(createPracticeSessionSeed());
     setIsFreePractice(false);
+    setIsHandsFreeActive(false);
     setFreePracticeIndex(0);
     setReviewedSessionCardIds(new Set());
   }, [selectedCategory]);
@@ -96,6 +112,29 @@ export default function OralPracticePage() {
     const timeout = window.setTimeout(() => setFeedback(null), 850);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
+
+  useEffect(() => {
+    if (!currentCardId && isHandsFreeActive) {
+      setIsHandsFreeActive(false);
+    }
+  }, [currentCardId, isHandsFreeActive]);
+
+  function handleDirectionChange(nextDirection: PracticeDirection) {
+    setDirection(nextDirection);
+    setFeedback(null);
+    setIsHandsFreeActive(false);
+    setSessionSeed(createPracticeSessionSeed());
+  }
+
+  function handleActivityChange(nextActivity: OralPracticeActivity) {
+    if (activity === nextActivity) {
+      return;
+    }
+
+    setActivity(nextActivity);
+    setFeedback(null);
+    setIsHandsFreeActive(false);
+  }
 
   function handleReview(result: ReviewResult) {
     if (!current) {
@@ -120,6 +159,7 @@ export default function OralPracticePage() {
     setFeedback(null);
     setSessionSeed(createPracticeSessionSeed());
     setFreePracticeIndex(0);
+    setIsHandsFreeActive(false);
     setIsFreePractice(true);
   }
 
@@ -136,7 +176,7 @@ export default function OralPracticePage() {
           className="min-w-0 flex-1"
           variant="compact"
           value={direction}
-          onChange={setDirection}
+          onChange={handleDirectionChange}
         />
         <div className="shrink-0 text-right">
           <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-slate-400">
@@ -147,6 +187,29 @@ export default function OralPracticePage() {
           </p>
         </div>
       </header>
+
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-white/80 p-1 shadow-sm ring-1 ring-white">
+        {oralPracticeActivityOptions.map((option) => {
+          const Icon = option.icon;
+          const isActive = activity === option.value;
+
+          return (
+            <button
+              className={`flex h-10 items-center justify-center gap-2 rounded-full text-xs font-black transition active:scale-[0.98] ${
+                isActive
+                  ? activityAccentClass
+                  : "bg-transparent text-slate-500 hover:bg-white"
+              }`}
+              key={option.value}
+              onClick={() => handleActivityChange(option.value)}
+              type="button"
+            >
+              <Icon aria-hidden="true" size={16} />
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
 
       {isReadOnlyMode ? (
         <p className="rounded-lg bg-white/90 px-3 py-2 text-xs font-bold leading-5 text-slate-500 shadow-sm ring-1 ring-white">
@@ -179,7 +242,10 @@ export default function OralPracticePage() {
         <OralPracticeCard
           card={current.card}
           direction={direction}
-          key={`${current.card.id}-${direction}-${selectedCategory}`}
+          inputMode={activity}
+          isHandsFreeActive={isHandsFreeActive}
+          key={`${current.card.id}-${direction}-${selectedCategory}-${activity}`}
+          onHandsFreeActiveChange={setIsHandsFreeActive}
           onReview={handleReview}
           progress={current.progress}
         />

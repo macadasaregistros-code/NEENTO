@@ -199,7 +199,10 @@ export function OralPracticeCard({
     [onReview],
   );
 
-  const startListeningAttempt = useCallback(() => {
+  const startListeningAttempt = useCallback((options: {
+    isPressing?: boolean;
+    withHaptic?: boolean;
+  } = {}) => {
     if (!isSupported || isLocked || isListening) {
       return false;
     }
@@ -215,11 +218,14 @@ export function OralPracticeCard({
     evaluatedAttemptIdRef.current = null;
     setActiveAttemptId(nextAttemptId);
     setFeedbackState(null);
-    setIsPressing(false);
+    setIsPressing(Boolean(options.isPressing));
     setPhase("recording");
     setSpeechMessage(null);
     setStatus("idle");
     resetTranscript();
+    if (options.withHaptic) {
+      triggerHaptic("light");
+    }
     startListening(recognitionLanguages);
 
     return true;
@@ -368,52 +374,43 @@ export function OralPracticeCard({
   );
 
   useEffect(() => {
-    const shouldEvaluate =
-      activeAttemptId > 0 &&
-      hasSpeechResult &&
-      !isLocked &&
-      !isListening &&
-      !isPressing &&
-      attemptFingerprint;
+    if (
+      activeAttemptId <= 0 ||
+      isLocked ||
+      !hasSpeechResult ||
+      !attemptFingerprint ||
+      evaluatedAttemptIdRef.current === activeAttemptId
+    ) {
+      return;
+    }
 
-    if (!shouldEvaluate || evaluatedAttemptIdRef.current === activeAttemptId) {
+    if (match === "match") {
+      evaluatedAttemptIdRef.current = activeAttemptId;
+      resolveSuccess();
+      return;
+    }
+
+    if (isListening || isPressing) {
       return;
     }
 
     evaluatedAttemptIdRef.current = activeAttemptId;
     setPhase("evaluating");
 
-    if (match === "match") {
-      setStatus("success");
-      setPhase("resolved");
-      setFeedbackState("success");
-      setIsRevealed(true);
-      setIsLocked(true);
-      stopListening();
-      triggerHaptic("success");
-      exitTimeoutRef.current = window.setTimeout(() => {
-        setExitDirection("right");
-      }, SUCCESS_EXIT_DELAY_MS);
-      scheduleReview("success", SUCCESS_ADVANCE_DELAY_MS);
-      return;
-    }
-
     const nextFailedAttempts = failedAttempts + 1;
 
     setFailedAttempts(nextFailedAttempts);
     triggerHaptic("warning");
 
+    if (isHandsFree && isHandsFreeActive) {
+      setStatus("retry");
+      setPhase("idle");
+      resetTranscript();
+      return;
+    }
+
     if (nextFailedAttempts >= 2) {
-      setStatus("fail");
-      setPhase("resolved");
-      setFeedbackState("fail");
-      setIsRevealed(true);
-      setIsLocked(true);
-      stopListening();
-      exitTimeoutRef.current = window.setTimeout(() => {
-        setExitDirection("left");
-      }, FAILED_EXIT_DELAY_MS);
-      scheduleReview("fail", FAILED_ANSWER_REVEAL_MS);
+      resolveFail();
       return;
     }
 
@@ -424,12 +421,15 @@ export function OralPracticeCard({
     attemptFingerprint,
     failedAttempts,
     hasSpeechResult,
+    isHandsFree,
+    isHandsFreeActive,
     isListening,
     isLocked,
     isPressing,
     match,
-    scheduleReview,
-    stopListening,
+    resetTranscript,
+    resolveFail,
+    resolveSuccess,
   ]);
 
   useEffect(() => {
@@ -446,27 +446,55 @@ export function OralPracticeCard({
     };
   }, [hasSpeechResult, isListening, isPressing, phase]);
 
+  useEffect(() => {
+    const canRestartHandsFree =
+      isHandsFree &&
+      isHandsFreeActive &&
+      isSupported &&
+      !isLocked &&
+      !isListening &&
+      !isPressing &&
+      phase !== "resolved";
+
+    if (!canRestartHandsFree) {
+      return;
+    }
+
+    if (phase !== "idle" && !(phase === "recording" && !hasSpeechResult)) {
+      return;
+    }
+
+    const delay = phase === "idle" ? 220 : HANDS_FREE_RESTART_DELAY_MS;
+
+    restartTimeoutRef.current = window.setTimeout(() => {
+      restartTimeoutRef.current = null;
+      startListeningAttempt();
+    }, delay);
+
+    return () => {
+      if (restartTimeoutRef.current) {
+        window.clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+    };
+  }, [
+    hasSpeechResult,
+    isHandsFree,
+    isHandsFreeActive,
+    isListening,
+    isLocked,
+    isPressing,
+    isSupported,
+    phase,
+    startListeningAttempt,
+  ]);
+
   function beginRecording(event: PointerEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
 
-    if (!isSupported || isLocked || isListening) {
-      return;
-    }
-
-    const nextAttemptId = attemptIdRef.current + 1;
-
-    attemptIdRef.current = nextAttemptId;
-    setActiveAttemptId(nextAttemptId);
-    setFeedbackState(null);
-    setIsPressing(true);
-    setPhase("recording");
-    setSpeechMessage(null);
-    setStatus("idle");
-    resetTranscript();
-    triggerHaptic("light");
-    startListening(recognitionLanguages);
+    startListeningAttempt({ isPressing: true, withHaptic: true });
   }
 
   function endRecording(event: PointerEvent<HTMLButtonElement>) {
@@ -482,19 +510,33 @@ export function OralPracticeCard({
     stopListening();
   }
 
+  function handleActivateHandsFree() {
+    if (isLocked) {
+      return;
+    }
+
+    onHandsFreeActiveChange(true);
+    startListeningAttempt({ withHaptic: true });
+  }
+
+  function handlePauseHandsFree() {
+    onHandsFreeActiveChange(false);
+    setIsPressing(false);
+    setPhase("idle");
+    setStatus("idle");
+    stopListening();
+  }
+
   function handleManualFail() {
     if (isLocked) {
       return;
     }
 
-    setStatus("fail");
-    setPhase("resolved");
-    setFeedbackState("fail");
-    setExitDirection("left");
-    setIsLocked(true);
-    stopListening();
-    triggerHaptic("warning");
-    scheduleReview("fail", MANUAL_FAIL_DELAY_MS);
+    if (isHandsFree) {
+      onHandsFreeActiveChange(false);
+    }
+
+    resolveFail(MANUAL_FAIL_DELAY_MS, 0);
   }
 
   function handleDragEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
@@ -553,14 +595,23 @@ export function OralPracticeCard({
             initial={{ opacity: 0, scale: 0.92 }}
           >
             {feedbackState === "success" ? (
-              <motion.div
-                animate={{ rotate: 0, scale: 1 }}
-                className="flex h-28 w-28 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-300/60"
-                initial={{ rotate: -12, scale: 0.55 }}
-                transition={{ damping: 12, stiffness: 320, type: "spring" }}
-              >
-                <Check aria-hidden="true" size={58} strokeWidth={4} />
-              </motion.div>
+              <div className="flex flex-col items-center gap-4 px-6 text-center">
+                <motion.div
+                  animate={{ rotate: 0, scale: 1 }}
+                  className="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-300/60"
+                  initial={{ rotate: -12, scale: 0.55 }}
+                  transition={{ damping: 12, stiffness: 320, type: "spring" }}
+                >
+                  <Check aria-hidden="true" size={52} strokeWidth={4} />
+                </motion.div>
+                <motion.div
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-full rounded-lg bg-white/95 px-4 py-3 shadow-soft ring-1 ring-emerald-100"
+                  initial={{ opacity: 0, y: 8 }}
+                >
+                  <LanguagePrompt content={answerContent} size="compact" tone="muted" />
+                </motion.div>
+              </div>
             ) : (
               <>
                 <motion.div
@@ -605,8 +656,12 @@ export function OralPracticeCard({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <div className="flex h-28 items-center justify-center rounded-lg bg-mist p-3 text-center">
-            <LanguagePrompt content={promptContent} size="compact" />
+          <div
+            className={`flex items-center justify-center rounded-lg bg-mist p-4 text-center ${
+              isHandsFree ? "min-h-[12rem] flex-1" : "h-28"
+            }`}
+          >
+            <LanguagePrompt content={promptContent} size={isHandsFree ? "fit" : "compact"} />
           </div>
 
           <div className="space-y-2">
@@ -641,32 +696,58 @@ export function OralPracticeCard({
                 </p>
               </div>
 
-              <button
-                className={`flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center gap-1 rounded-full text-[0.68rem] font-black text-white shadow-xl transition active:scale-[0.96] ${
-                  isRecordingActive
-                    ? "bg-slate-900 shadow-slate-300"
-                    : "bg-emerald-600 shadow-emerald-200"
-                }`}
-                disabled={!isSupported || isLocked}
-                onContextMenu={(event) => event.preventDefault()}
-                onPointerCancel={endRecording}
-                onPointerDown={beginRecording}
-                onPointerLeave={endRecording}
-                onPointerUp={endRecording}
-                type="button"
-              >
-                {isRecordingActive ? (
-                  <>
-                    <Square aria-hidden="true" size={19} />
-                    {copy.speech.recording}
-                  </>
-                ) : (
-                  <>
-                    <Mic aria-hidden="true" size={21} />
-                    {copy.speech.speak}
-                  </>
-                )}
-              </button>
+              {isHandsFree ? (
+                <button
+                  className={`flex h-[4.5rem] w-[4.8rem] flex-col items-center justify-center gap-1 rounded-lg text-[0.68rem] font-black text-white shadow-xl transition active:scale-[0.96] ${
+                    isHandsFreeActive
+                      ? "bg-slate-900 shadow-slate-300"
+                      : "bg-sky-500 shadow-sky-200"
+                  }`}
+                  disabled={!isSupported || isLocked}
+                  onClick={isHandsFreeActive ? handlePauseHandsFree : handleActivateHandsFree}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  type="button"
+                >
+                  {isHandsFreeActive ? (
+                    <>
+                      <Square aria-hidden="true" size={19} />
+                      Pausar
+                    </>
+                  ) : (
+                    <>
+                      <Mic aria-hidden="true" size={21} />
+                      Activar
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  className={`flex h-[4.5rem] w-[4.5rem] flex-col items-center justify-center gap-1 rounded-full text-[0.68rem] font-black text-white shadow-xl transition active:scale-[0.96] ${
+                    isRecordingActive
+                      ? "bg-slate-900 shadow-slate-300"
+                      : "bg-emerald-600 shadow-emerald-200"
+                  }`}
+                  disabled={!isSupported || isLocked}
+                  onContextMenu={(event) => event.preventDefault()}
+                  onPointerCancel={endRecording}
+                  onPointerDown={beginRecording}
+                  onPointerLeave={endRecording}
+                  onPointerUp={endRecording}
+                  type="button"
+                >
+                  {isRecordingActive ? (
+                    <>
+                      <Square aria-hidden="true" size={19} />
+                      {copy.speech.recording}
+                    </>
+                  ) : (
+                    <>
+                      <Mic aria-hidden="true" size={21} />
+                      {copy.speech.speak}
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             <div className="flex items-center justify-between gap-2 rounded-full bg-slate-950 px-3 py-2 text-white shadow-soft">
@@ -705,6 +786,19 @@ export function OralPracticeCard({
               <p className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
                 {speechMessage}
               </p>
+            ) : null}
+
+            {isHandsFree ? (
+              <button
+                className="mx-auto flex h-11 items-center justify-center gap-2 rounded-full px-4 text-xs font-black uppercase tracking-[0.12em] text-slate-400 transition hover:text-red-500 active:scale-[0.98]"
+                disabled={isLocked}
+                onClick={handleManualFail}
+                onPointerDown={(event) => event.stopPropagation()}
+                type="button"
+              >
+                <HeartCrack aria-hidden="true" size={16} />
+                No puedo hablar ahora
+              </button>
             ) : null}
 
             {answerContent.language === "ja" && hasSpeechResult ? (
