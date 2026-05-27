@@ -35,16 +35,16 @@ export default function HomePage() {
     : "bg-emerald-600 shadow-emerald-200";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
-      <header className="flex shrink-0 items-start justify-between gap-3 pt-1">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <header className="flex shrink-0 items-start justify-between gap-3 pt-1.5">
         <div className="min-w-0">
           <p className={`text-xs font-black uppercase tracking-[0.16em] ${accentTextClass}`}>
             {copy.titleKicker}
           </p>
-          <h1 className="mt-1 text-4xl font-black leading-none tracking-normal text-ink">
+          <h1 className="mt-1.5 text-5xl font-black leading-none tracking-normal text-ink">
             Neento
           </h1>
-          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-slate-600">
+          <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-slate-600">
             {copy.description}
           </p>
           {profile?.fullName ? (
@@ -72,14 +72,14 @@ export default function HomePage() {
         </p>
       ) : null}
 
-      <section className="shrink-0 rounded-lg bg-white p-3 shadow-soft">
+      <section className="flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-white p-4 shadow-soft">
         <p className="text-center text-sm font-bold text-slate-500">{copy.pendingToday}</p>
-        <div className="mt-2 grid grid-cols-[1fr_7.25rem] items-stretch gap-2.5">
+        <div className="mt-3 grid grid-cols-[1fr_7.75rem] items-stretch gap-3">
           <div className="flex flex-col items-center justify-center text-center">
-            <p className="text-4xl font-black leading-none text-ink">
+            <p className="text-6xl font-black leading-none text-ink">
               {visualDueCards.length + oralDueCards.length}
             </p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">
+            <p className="mt-2 text-sm font-semibold text-slate-500">
               {copy.readyReviews}
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function HomePage() {
                 <span className="block truncate text-[0.65rem] font-black uppercase tracking-[0.12em] text-emerald-700">
                   {copy.visual}
                 </span>
-                <span className="block text-lg font-black text-emerald-950">
+                <span className="block text-xl font-black text-emerald-950">
                   {visualDueCards.length}
                 </span>
               </span>
@@ -111,7 +111,7 @@ export default function HomePage() {
                 <span className="block truncate text-[0.65rem] font-black uppercase tracking-[0.12em] text-sky-700">
                   {copy.oral}
                 </span>
-                <span className="block text-lg font-black text-sky-950">
+                <span className="block text-xl font-black text-sky-950">
                   {oralDueCards.length}
                 </span>
               </span>
@@ -122,25 +122,25 @@ export default function HomePage() {
 
       <section className="grid shrink-0 grid-cols-2 gap-2.5">
         <Link
-          className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-slate-100 transition active:scale-[0.98]"
+          className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-100 transition active:scale-[0.98]"
           href="/vocabulary"
         >
           <div className="flex items-start justify-between gap-2">
             <BookOpen aria-hidden="true" className="text-slate-400" size={22} />
             <ArrowRight aria-hidden="true" className="text-slate-300" size={18} />
           </div>
-          <p className="text-2xl font-black text-ink">{cards.length}</p>
-          <p className="truncate text-xs font-semibold text-slate-500">{copy.cards}</p>
+          <p className="text-3xl font-black text-ink">{cards.length}</p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-slate-500">{copy.cards}</p>
         </Link>
-        <div className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-slate-100">
-          <p className="text-2xl font-black text-ink">{reviewedCount}/{cards.length}</p>
-          <p className="truncate text-xs font-semibold text-slate-500">{copy.progressed}</p>
+        <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-100">
+          <p className="text-3xl font-black text-ink">{reviewedCount}/{cards.length}</p>
+          <p className="mt-0.5 truncate text-sm font-semibold text-slate-500">{copy.progressed}</p>
         </div>
       </section>
 
       <section className="mt-auto shrink-0">
         <Link
-          className={`flex min-h-[3.5rem] items-center justify-between gap-3 rounded-lg px-4 text-sm font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
+          className={`flex min-h-[4.15rem] items-center justify-between gap-3 rounded-lg px-5 text-sm font-black text-white shadow-lg transition active:scale-[0.99] ${oralButtonClass}`}
           href="/stats"
         >
           <span className="flex items-center gap-3">
@@ -148,7 +148,7 @@ export default function HomePage() {
               <BarChart3 aria-hidden="true" size={19} />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-base">{copy.stats}</span>
+              <span className="block truncate text-lg">{copy.stats}</span>
               <span className="block text-xs font-bold opacity-80">
                 {reviewedCount}/{cards.length} {copy.progressed}
               </span>

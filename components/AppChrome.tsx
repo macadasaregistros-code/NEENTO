@@ -24,16 +24,26 @@ export function AppChrome({ children }: AppChromeProps) {
   const bottomPaddingClass = shouldShowAppNav
     ? "pb-[calc(3.45rem+env(safe-area-inset-bottom))]"
     : "pb-[max(0.8rem,env(safe-area-inset-bottom))]";
-  const contentOverflowClass = shouldLockViewport
-    ? "overflow-hidden"
-    : "overflow-y-auto overscroll-contain";
+
+  if (!shouldLockViewport) {
+    return (
+      <main className={`min-h-dvh text-ink ${themeClass}`}>
+        <div
+          className={`mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-[max(0.8rem,env(safe-area-inset-top))] ${bottomPaddingClass}`}
+        >
+          {children}
+        </div>
+        {shouldShowAppNav ? <BottomNav /> : null}
+      </main>
+    );
+  }
 
   return (
     <main className={`h-dvh overflow-hidden text-ink ${themeClass}`}>
       <div
         className={`mx-auto flex h-dvh w-full max-w-md flex-col px-4 pt-[max(0.8rem,env(safe-area-inset-top))] ${bottomPaddingClass}`}
       >
-        <div className={`flex min-h-0 flex-1 flex-col ${contentOverflowClass}`}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </div>
       </div>
