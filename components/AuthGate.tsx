@@ -39,12 +39,12 @@ export function AuthGate({ children }: AuthGateProps) {
 
     setIsLoading(true);
 
-    supabase.auth.getUser().then((result: { data: { user: User | null } }) => {
+    supabase.auth.getSession().then((result: { data: { session: Session | null } }) => {
       if (!isMounted) {
         return;
       }
 
-      const nextUser = result.data.user;
+      const nextUser = result.data.session?.user ?? null;
 
       setUser(nextUser);
       setIsLoading(false);

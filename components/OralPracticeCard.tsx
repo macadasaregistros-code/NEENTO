@@ -153,9 +153,11 @@ export function OralPracticeCard({
         const waveLift = Math.sin(index * 0.85 + audioLevel * 5) * 6;
         const nextHeight = 10 + audioLevel * (baseHeight + 34) + waveLift;
 
-        return Math.max(10, Math.min(58, Math.round(nextHeight)));
+        const maxHeight = isHandsFree ? 42 : 58;
+
+        return Math.max(10, Math.min(maxHeight, Math.round(nextHeight)));
       }),
-    [audioLevel, isRecordingActive],
+    [audioLevel, isHandsFree, isRecordingActive],
   );
   const statusCopy: Record<OralStatus, string> = {
     fail: copy.speech.answerRevealed,
@@ -178,6 +180,28 @@ export function OralPracticeCard({
     ? "bg-red-50 ring-red-100"
     : "bg-emerald-50 ring-emerald-100";
   const answerLabelClass = isFailAnswer ? "text-red-700" : "text-emerald-700";
+  const promptPanelSizeClass = isHandsFree
+    ? isRevealed
+      ? "min-h-[5.5rem]"
+      : "min-h-[9.5rem] flex-1"
+    : isRevealed
+      ? "h-24"
+      : "h-28";
+  const promptTextSize = isHandsFree && !isRevealed ? "fit" : "compact";
+  const controlGridClass = isHandsFree
+    ? "grid-cols-[2.75rem_minmax(0,1fr)_4.1rem] gap-2"
+    : "grid-cols-[3rem_minmax(0,1fr)_4.5rem] gap-3";
+  const listenButtonSizeClass = isHandsFree ? "h-11 w-11" : "h-12 w-12";
+  const waveformShellClass = isHandsFree
+    ? "rounded-[1.25rem] p-2"
+    : "rounded-[1.45rem] p-2.5";
+  const waveformTrackClass = isHandsFree ? "h-11 px-2" : "h-14 px-3";
+  const heardTextClass = isHandsFree
+    ? "mt-1 line-clamp-1 min-h-5 px-1 text-[0.66rem] leading-5"
+    : "mt-2 line-clamp-2 min-h-9 px-1 text-xs leading-[1.15rem]";
+  const handsFreeButtonClass = isHandsFreeActive
+    ? "bg-slate-900 shadow-slate-300"
+    : "bg-sky-500 shadow-sky-200";
   const cardAnimate =
     exitDirection === "right"
       ? { opacity: 0, rotate: 7, scale: 0.96, x: 420, y: -8 }
@@ -655,20 +679,33 @@ export function OralPracticeCard({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5">
           <div
             className={`flex items-center justify-center rounded-lg bg-mist p-4 text-center ${
-              isHandsFree ? "min-h-[12rem] flex-1" : "h-28"
+              promptPanelSizeClass
             }`}
           >
-            <LanguagePrompt content={promptContent} size={isHandsFree ? "fit" : "compact"} />
+            <LanguagePrompt content={promptContent} size={promptTextSize} />
           </div>
 
-          <div className="space-y-2">
-            <div className="grid grid-cols-[3rem_minmax(0,1fr)_4.5rem] items-center gap-3">
+          {isRevealed ? (
+            <div className={`shrink-0 rounded-lg p-2.5 ring-1 ${answerPanelClass}`}>
+              <p
+                className={`text-[0.65rem] font-black uppercase tracking-[0.14em] ${answerLabelClass}`}
+              >
+                {copy.practice.answer}
+              </p>
+              <div className="mt-1.5">
+                <LanguagePrompt content={answerContent} size="compact" tone="muted" />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="min-h-0 space-y-2">
+            <div className={`grid items-center ${controlGridClass}`}>
               <button
                 aria-label={copy.speech.listen}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.96]"
+                className={`flex ${listenButtonSizeClass} items-center justify-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-[0.96]`}
                 onClick={handleSpeak}
                 onPointerDown={(event) => event.stopPropagation()}
                 type="button"
@@ -676,8 +713,8 @@ export function OralPracticeCard({
                 <Volume2 aria-hidden="true" size={20} />
               </button>
 
-              <div className="min-w-0 rounded-[1.45rem] bg-white p-2.5 shadow-sm ring-1 ring-emerald-100">
-                <div className="flex h-14 items-center justify-center gap-1 overflow-hidden rounded-full bg-emerald-50 px-3">
+              <div className={`min-w-0 bg-white shadow-sm ring-1 ring-emerald-100 ${waveformShellClass}`}>
+                <div className={`flex items-center justify-center gap-1 overflow-hidden rounded-full bg-emerald-50 ${waveformTrackClass}`}>
                   {waveformHeights.map((height, index) => (
                     <span
                       aria-hidden="true"
@@ -691,18 +728,14 @@ export function OralPracticeCard({
                     />
                   ))}
                 </div>
-                <p className="mt-2 line-clamp-2 min-h-9 px-1 text-center text-xs font-black leading-[1.15rem] text-slate-700">
+                <p className={`${heardTextClass} text-center font-black text-slate-700`}>
                   {heardText}
                 </p>
               </div>
 
               {isHandsFree ? (
                 <button
-                  className={`flex h-[4.5rem] w-[4.8rem] flex-col items-center justify-center gap-1 rounded-lg text-[0.68rem] font-black text-white shadow-xl transition active:scale-[0.96] ${
-                    isHandsFreeActive
-                      ? "bg-slate-900 shadow-slate-300"
-                      : "bg-sky-500 shadow-sky-200"
-                  }`}
+                  className={`flex h-16 w-[4.1rem] flex-col items-center justify-center gap-1 rounded-lg text-[0.65rem] font-black text-white shadow-xl transition active:scale-[0.96] ${handsFreeButtonClass}`}
                   disabled={!isSupported || isLocked}
                   onClick={isHandsFreeActive ? handlePauseHandsFree : handleActivateHandsFree}
                   onPointerDown={(event) => event.stopPropagation()}
@@ -750,7 +783,7 @@ export function OralPracticeCard({
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-2 rounded-full bg-slate-950 px-3 py-2 text-white shadow-soft">
+            <div className="flex items-center justify-between gap-2 rounded-full bg-slate-950 px-2.5 py-1.5 text-white shadow-soft">
               <div className="flex min-w-0 items-center gap-2">
                 <span
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${
@@ -761,7 +794,7 @@ export function OralPracticeCard({
                   {statusText}
                 </p>
               </div>
-              <p className="shrink-0 text-xs font-black text-white/65">
+              <p className="shrink-0 text-[0.68rem] font-black text-white/65">
                 {copy.speech.attempts}: {failedAttempts}/2
                 {confidence > 0 ? ` · ${Math.round(confidence * 100)}%` : ""}
               </p>
@@ -790,7 +823,7 @@ export function OralPracticeCard({
 
             {isHandsFree ? (
               <button
-                className="mx-auto flex h-11 items-center justify-center gap-2 rounded-full px-4 text-xs font-black uppercase tracking-[0.12em] text-slate-400 transition hover:text-red-500 active:scale-[0.98]"
+                className="mx-auto flex h-9 items-center justify-center gap-2 rounded-full px-4 text-[0.68rem] font-black uppercase tracking-[0.1em] text-slate-400 transition hover:text-red-500 active:scale-[0.98]"
                 disabled={isLocked}
                 onClick={handleManualFail}
                 onPointerDown={(event) => event.stopPropagation()}
@@ -820,18 +853,6 @@ export function OralPracticeCard({
             ) : null}
           </div>
 
-          {isRevealed ? (
-            <div className={`rounded-lg p-3 ring-1 ${answerPanelClass}`}>
-              <p
-                className={`text-[0.68rem] font-black uppercase tracking-[0.16em] ${answerLabelClass}`}
-              >
-                {copy.practice.answer}
-              </p>
-              <div className="mt-2">
-                <LanguagePrompt content={answerContent} size="compact" tone="muted" />
-              </div>
-            </div>
-          ) : null}
         </div>
       </motion.article>
     </div>

@@ -12,8 +12,8 @@ export function LearningModeSelector() {
   const { config, mode, setMode } = useLearningMode();
 
   return (
-    <div className="rounded-lg bg-white/85 p-2 shadow-sm ring-1 ring-white/80 backdrop-blur">
-      <div className="mb-2 flex items-center gap-2 px-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-slate-400">
+    <div className="shrink-0 rounded-lg bg-white/85 p-1.5 shadow-sm ring-1 ring-white/80 backdrop-blur">
+      <div className="mb-1.5 flex items-center gap-2 px-1 text-[0.65rem] font-black uppercase tracking-[0.14em] text-slate-400">
         <Languages aria-hidden="true" size={14} />
         {config.appLanguage === "ko" ? "모드" : "Modo"}
       </div>
@@ -28,7 +28,7 @@ export function LearningModeSelector() {
 
           return (
             <button
-              className={`min-h-11 rounded-lg px-3 py-2 text-left text-xs font-black leading-tight transition active:scale-[0.98] ${
+              className={`min-h-9 rounded-lg px-2.5 py-1.5 text-left text-xs font-black leading-tight transition active:scale-[0.98] ${
                 isActive ? activeClass : "bg-slate-50 text-slate-500 hover:bg-white"
               }`}
               key={item}
