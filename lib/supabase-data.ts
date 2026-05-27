@@ -80,6 +80,9 @@ export interface AppProfile {
   roleGlobal: ProfileRole;
 }
 
+let appProfilesCache: AppProfile[] | null = null;
+let appProfilesPromise: Promise<AppProfile[]> | null = null;
+
 async function attachJjuAudio(cards: VocabularyCard[]): Promise<VocabularyCard[]> {
   const audioRecords = await fetchJjuAudioRecords();
 
@@ -228,6 +231,25 @@ function toAppProfile(row: AppProfileRow): AppProfile | null {
 }
 
 export async function fetchAppProfiles(): Promise<AppProfile[]> {
+  if (appProfilesCache) {
+    return appProfilesCache;
+  }
+
+  if (appProfilesPromise) {
+    return appProfilesPromise;
+  }
+
+  appProfilesPromise = fetchAppProfilesFromSupabase();
+
+  try {
+    appProfilesCache = await appProfilesPromise;
+    return appProfilesCache;
+  } finally {
+    appProfilesPromise = null;
+  }
+}
+
+async function fetchAppProfilesFromSupabase(): Promise<AppProfile[]> {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, role_global, app_persona")

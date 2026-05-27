@@ -272,26 +272,25 @@ export function useStudyProgress() {
     setUserId(null);
 
     async function loadSupabaseData() {
-      const { data, error } = await supabase.auth.getUser();
+      const { data, error } = await supabase.auth.getSession();
+      const currentUser = data.session?.user ?? null;
 
-      if (error || !data.user) {
+      if (error || !currentUser) {
         throw error ?? new Error("Missing Supabase user.");
       }
 
-      const appProfiles = await fetchAppProfiles();
-      const currentProfile = appProfiles.find((profile) => profile.id === data.user.id);
-      const resolvedCurrentPersona =
-        currentProfile?.appPersona ?? getPersonaForEmail(data.user.email);
+      const resolvedCurrentPersona = getPersonaForEmail(currentUser.email);
 
       if (!resolvedCurrentPersona) {
         throw new Error("Cuenta no autorizada para Neento.");
       }
 
+      const appProfiles = await fetchAppProfiles();
       const resolvedTargetProfile =
         appProfiles.find((profile) => profile.appPersona === targetPersona) ?? null;
       const resolvedTargetUserId =
         resolvedTargetProfile?.id ??
-        (resolvedCurrentPersona === targetPersona ? data.user.id : null);
+        (resolvedCurrentPersona === targetPersona ? currentUser.id : null);
 
       if (!resolvedTargetUserId) {
         throw new Error("No se encontro el perfil del modo seleccionado.");
@@ -299,10 +298,10 @@ export function useStudyProgress() {
 
       const canMutate =
         resolvedCurrentPersona === targetPersona &&
-        resolvedTargetUserId === data.user.id;
+        resolvedTargetUserId === currentUser.id;
 
       const syncedLocalCards = canMutate
-        ? await syncLocalCardsToSupabase(storedCards, data.user.id)
+        ? await syncLocalCardsToSupabase(storedCards, currentUser.id)
         : { failedCards: [], syncedCards: [] };
       const studyData = await fetchSupabaseStudyData(resolvedTargetUserId);
 
@@ -313,7 +312,7 @@ export function useStudyProgress() {
         studyData,
         targetProfile: resolvedTargetProfile,
         targetUserId: resolvedTargetUserId,
-        userId: data.user.id,
+        userId: currentUser.id,
       };
     }
 

@@ -28,9 +28,14 @@ export async function middleware(request: NextRequest) {
 
   if (!user && !isPublicRoute) {
     const loginUrl = request.nextUrl.clone();
+    const redirectPath = `${pathname}${request.nextUrl.search}`;
 
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("redirectTo", pathname === "/" ? "/dashboard" : pathname);
+    loginUrl.search = "";
+    loginUrl.searchParams.set(
+      "redirectTo",
+      pathname === "/" ? "/dashboard" : redirectPath,
+    );
 
     return NextResponse.redirect(loginUrl);
   }

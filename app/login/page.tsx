@@ -14,9 +14,9 @@ const authText = {
   loginDescription:
     "Usa la cuenta autorizada de Daiki o Jju. Tu progreso queda separado por modo.",
   loginTitle: "Entrar",
-  password: "Contrasena",
+  password: "Contraseña",
   passwordAccountHelp:
-    "Si antes usabas magic link y nunca creaste contrasena, esa cuenta puede necesitar una contrasena nueva.",
+    "Si antes usabas magic link y nunca creaste contraseña, esa cuenta puede necesitar una contraseña nueva.",
   signInCta: "Entrar",
 };
 

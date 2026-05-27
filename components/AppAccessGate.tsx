@@ -1,8 +1,9 @@
 "use client";
 
 import { Loader2, LogOut } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -18,13 +19,44 @@ function isPublicRoute(pathname: string): boolean {
 
 export function AppAccessGate({ children }: AppAccessGateProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const isPublic = useMemo(() => isPublicRoute(pathname), [pathname]);
   const { error, isAllowedAppUser, isLoading, signOut, user } = useCurrentUser();
+  const [shouldShowLoading, setShouldShowLoading] = useState(false);
 
-  if (isPublicRoute(pathname)) {
+  useEffect(() => {
+    if (!isLoading) {
+      setShouldShowLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setShouldShowLoading(true), 280);
+
+    return () => window.clearTimeout(timeout);
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (isPublic || isLoading || user) {
+      return;
+    }
+
+    const redirectPath =
+      typeof window === "undefined"
+        ? pathname
+        : `${pathname}${window.location.search}`;
+
+    router.replace(`/login?redirectTo=${encodeURIComponent(redirectPath)}`);
+  }, [isLoading, isPublic, pathname, router, user]);
+
+  if (isPublic) {
     return <>{children}</>;
   }
 
   if (isLoading || !user) {
+    if (!shouldShowLoading) {
+      return null;
+    }
+
     return (
       <main className="flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top,_#dcfce7_0,_#f7fbf5_42%,_#eef7f0_100%)] px-6 text-ink">
         <div className="rounded-lg bg-white p-6 text-center shadow-soft ring-1 ring-white">
@@ -34,7 +66,7 @@ export function AppAccessGate({ children }: AppAccessGateProps) {
             size={28}
           />
           <p className="mt-3 text-sm font-black text-slate-500">
-            Cargando permisos...
+            Abriendo Neento...
           </p>
         </div>
       </main>
@@ -75,4 +107,3 @@ export function AppAccessGate({ children }: AppAccessGateProps) {
 
   return <>{children}</>;
 }
-

@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { CircleHelp, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { PointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -17,9 +18,14 @@ import {
 import {
   buildLearningStory,
   getRecentReviewedCards,
+  getStorySourceCards,
   getStoryTerms,
+  parseStoryLevel,
+  parseStoryVersion,
   selectStoryCards,
+  STORY_LEVEL_OPTIONS,
   type StorySegment,
+  type StoryLevel,
   type StoryTerm,
 } from "@/lib/story";
 
@@ -92,13 +98,53 @@ function StoryText({
   );
 }
 
+function StoryLevelSelect({
+  onChange,
+  value,
+}: {
+  onChange: (level: StoryLevel) => void;
+  value: StoryLevel;
+}) {
+  return (
+    <div
+      aria-label="Nivel de historia"
+      className="grid h-11 grid-cols-3 rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-200"
+      role="group"
+    >
+      {STORY_LEVEL_OPTIONS.map((level) => {
+        const isActive = value === level;
+
+        return (
+          <button
+            aria-pressed={isActive}
+            className={`flex min-w-9 items-center justify-center rounded-md px-2 text-xs font-black transition active:scale-[0.98] ${
+              isActive
+                ? "bg-amber-500 text-white shadow-sm"
+                : "text-slate-500 hover:bg-amber-50 hover:text-amber-700"
+            }`}
+            key={level}
+            onClick={() => onChange(level)}
+            type="button"
+          >
+            {level}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function StoryPage() {
+  const searchParams = useSearchParams();
   const { mode } = useLearningMode();
   const { cards, progressList, targetPersona } = useStudyProgress();
+  const requestedStoryLevel = parseStoryLevel(searchParams.get("level"));
+  const requestedStoryVersion = parseStoryVersion(searchParams.get("version"));
   const [activeTermId, setActiveTermId] = useState<string | null>(null);
   const [activityEvents, setActivityEvents] = useState<ReviewActivityEvent[]>([]);
   const [isTranslationRevealed, setIsTranslationRevealed] = useState(false);
-  const [storyVersion, setStoryVersion] = useState(0);
+  const [storyLevel, setStoryLevel] = useState<StoryLevel>(requestedStoryLevel);
+  const [storyVersion, setStoryVersion] = useState(requestedStoryVersion);
   const accentClass =
     mode === "ko_es"
       ? "from-sky-500 via-cyan-400 to-violet-500"
@@ -107,6 +153,13 @@ export default function StoryPage() {
   useEffect(() => {
     setActivityEvents(readReviewActivity(targetPersona));
   }, [targetPersona]);
+
+  useEffect(() => {
+    setActiveTermId(null);
+    setIsTranslationRevealed(false);
+    setStoryLevel(requestedStoryLevel);
+    setStoryVersion(requestedStoryVersion);
+  }, [requestedStoryLevel, requestedStoryVersion]);
 
   const mergedActivityEvents = useMemo(
     () =>
@@ -125,8 +178,10 @@ export default function StoryPage() {
       ),
     [cards, mergedActivityEvents, progressList],
   );
-  const storySourceCards =
-    recentReviewedCards.length > 0 ? recentReviewedCards : cards.slice(0, 50);
+  const storySourceCards = useMemo(
+    () => getStorySourceCards(cards, recentReviewedCards),
+    [cards, recentReviewedCards],
+  );
   const storyCards = useMemo(
     () => selectStoryCards(storySourceCards, storyVersion),
     [storySourceCards, storyVersion],
@@ -136,14 +191,24 @@ export default function StoryPage() {
     [mode, storyCards],
   );
   const story = useMemo(
-    () => buildLearningStory(storyTerms, mode, storyVersion),
-    [mode, storyTerms, storyVersion],
+    () => buildLearningStory(storyTerms, mode, storyVersion, storyLevel),
+    [mode, storyLevel, storyTerms, storyVersion],
+  );
+  const questionHref = useMemo(
+    () => `/story/questions?level=${storyLevel}&version=${storyVersion}`,
+    [storyLevel, storyVersion],
   );
 
   function createNextStory() {
     setActiveTermId(null);
     setIsTranslationRevealed(false);
     setStoryVersion((currentVersion) => currentVersion + 1);
+  }
+
+  function handleStoryLevelChange(nextLevel: StoryLevel) {
+    setActiveTermId(null);
+    setIsTranslationRevealed(false);
+    setStoryLevel(nextLevel);
   }
 
   function handleDragEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
@@ -160,13 +225,10 @@ export default function StoryPage() {
   return (
     <div className="flex flex-1 flex-col gap-5">
       <header className="flex items-center justify-between pt-2">
-        <Link
-          aria-label="Volver a Home"
-          className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-ink shadow-sm ring-1 ring-slate-200"
-          href="/"
-        >
-          <ArrowLeft aria-hidden="true" size={21} />
-        </Link>
+        <StoryLevelSelect
+          onChange={handleStoryLevelChange}
+          value={storyLevel}
+        />
         <div className="text-right">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-600">
             Historia
@@ -196,14 +258,14 @@ export default function StoryPage() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-600">
-                {story.level}
+                {story.level} / {story.category}
               </p>
               <h2 className="mt-1 text-2xl font-black leading-tight text-ink">
                 {story.title}
               </h2>
             </div>
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800 ring-1 ring-amber-200">
-              {story.terms.length} palabras
+              {story.terms.length} vocab.
             </span>
           </div>
 
@@ -220,6 +282,14 @@ export default function StoryPage() {
           <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.12em] text-slate-400">
             {isTranslationRevealed ? "desliza abajo" : "desliza arriba"}
           </p>
+
+          <Link
+            className="mx-auto mt-4 flex h-10 w-fit items-center justify-center gap-2 rounded-full bg-ink px-4 text-xs font-black text-white shadow-soft transition active:scale-[0.98]"
+            href={questionHref}
+          >
+            <CircleHelp aria-hidden="true" size={16} />
+            Preguntas
+          </Link>
         </motion.article>
       ) : (
         <section className="rounded-lg bg-white p-5 text-center shadow-soft ring-1 ring-white">

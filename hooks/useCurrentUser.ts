@@ -1,9 +1,13 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 
-import { getPersonaForEmail, type AppPersona } from "@/lib/app-persona";
+import {
+  appPersonas,
+  getPersonaForEmail,
+  type AppPersona,
+} from "@/lib/app-persona";
 import { supabase } from "@/lib/supabase";
 
 export type ProfileRole = "owner" | "worker";
@@ -15,19 +19,25 @@ export interface CurrentProfile {
   roleGlobal: ProfileRole;
 }
 
-interface ProfileRow {
-  app_persona: AppPersona | null;
-  full_name: string | null;
-  id: string;
-  role_global: ProfileRole | null;
+function getRoleForPersona(persona: AppPersona): ProfileRole {
+  return persona === "daiki" ? "owner" : "worker";
 }
 
-function mapProfile(row: ProfileRow, fallbackEmail?: string | null): CurrentProfile {
+function mapUserProfile(user: User): CurrentProfile | null {
+  const appPersona = getPersonaForEmail(user.email);
+
+  if (!appPersona) {
+    return null;
+  }
+
   return {
-    appPersona: row.app_persona ?? getPersonaForEmail(fallbackEmail),
-    fullName: row.full_name ?? "",
-    id: row.id,
-    roleGlobal: row.role_global ?? "worker",
+    appPersona,
+    fullName:
+      typeof user.user_metadata?.full_name === "string"
+        ? user.user_metadata.full_name
+        : appPersonas[appPersona].label,
+    id: user.id,
+    roleGlobal: getRoleForPersona(appPersona),
   };
 }
 
@@ -37,78 +47,61 @@ export function useCurrentUser() {
   const [profile, setProfile] = useState<CurrentProfile | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
+  const applySession = useCallback((session: Session | null) => {
+    const nextUser = session?.user ?? null;
+
+    setUser(nextUser);
+    setProfile(nextUser ? mapUserProfile(nextUser) : null);
+    setError(null);
+    setIsLoading(false);
+
+    if (nextUser && !getPersonaForEmail(nextUser.email)) {
+      setError("Esta app solo permite las cuentas de Daiki y Jju.");
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     const {
-      data: { user: nextUser },
-      error: userError,
-    } = await supabase.auth.getUser();
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    if (userError || !nextUser) {
+    if (sessionError) {
       setUser(null);
       setProfile(null);
-      setError(userError?.message ?? null);
+      setError(sessionError.message);
       setIsLoading(false);
       return;
     }
 
-    setUser(nextUser);
-
-    const { data, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, full_name, role_global, app_persona")
-      .eq("id", nextUser.id)
-      .maybeSingle();
-
-    if (profileError) {
-      setProfile(null);
-      setError(profileError.message);
-      setIsLoading(false);
-      return;
-    }
-
-    if (data) {
-      setProfile(mapProfile(data as ProfileRow, nextUser.email));
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: ensuredProfile, error: ensureError } =
-      await supabase.rpc("ensure_current_profile");
-
-    if (ensureError || !ensuredProfile) {
-      setProfile(null);
-      setError(ensureError?.message ?? "No se pudo cargar el perfil.");
-      setIsLoading(false);
-      return;
-    }
-
-    setProfile(mapProfile(ensuredProfile as ProfileRow, nextUser.email));
-    setIsLoading(false);
-  }, []);
+    applySession(session);
+  }, [applySession]);
 
   useEffect(() => {
     let isMounted = true;
 
-    refresh().finally(() => {
-      if (!isMounted) {
-        return;
-      }
-    });
+    refresh();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      void refresh();
-    });
+    } = supabase.auth.onAuthStateChange(
+      (_event: string, session: Session | null) => {
+      if (!isMounted) {
+        return;
+      }
+
+      applySession(session);
+      },
+    );
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [refresh]);
+  }, [applySession, refresh]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
