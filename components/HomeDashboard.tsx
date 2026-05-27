@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowRight, BarChart3, BookOpen, Eye, LogOut, Mic } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpen,
+  Eye,
+  LogOut,
+  Mic,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 
 import { LearningModeSelector } from "@/components/LearningModeSelector";
@@ -72,7 +80,7 @@ export default function HomePage() {
         </p>
       ) : null}
 
-      <section className="flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-white p-4 shadow-soft">
+      <section className="relative flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-white p-4 pb-16 shadow-soft">
         <p className="text-center text-sm font-bold text-slate-500">{copy.pendingToday}</p>
         <div className="mt-3 grid grid-cols-[1fr_7.75rem] items-stretch gap-3">
           <div className="flex flex-col items-center justify-center text-center">
@@ -118,6 +126,13 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+        <Link
+          className="treasure-story-button absolute bottom-3 left-1/2 flex h-11 -translate-x-1/2 items-center justify-center gap-2 rounded-full px-4 text-xs font-black text-amber-950 shadow-lg transition active:scale-[0.97]"
+          href="/story"
+        >
+          <Sparkles aria-hidden="true" size={16} />
+          Mi pequeña historia
+        </Link>
       </section>
 
       <section className="grid shrink-0 grid-cols-2 gap-2.5">

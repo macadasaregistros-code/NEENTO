@@ -103,9 +103,20 @@ function getReinforcePracticeMode(progress: CardProgress): "oral" | "visual" {
   return progress.oralFailCount >= progress.visualFailCount ? "oral" : "visual";
 }
 
-function getReinforcePracticeHref(card: VocabularyCard, progress: CardProgress): string {
-  return `/practice/${getReinforcePracticeMode(progress)}?cards=${encodeURIComponent(
+function getReinforcePracticeHref(
+  card: VocabularyCard,
+  progress: CardProgress,
+  reinforceCards: VocabularyCard[],
+): string {
+  const cardIds = [
     card.id,
+    ...reinforceCards
+      .map((reinforceCard) => reinforceCard.id)
+      .filter((cardId) => cardId !== card.id),
+  ];
+
+  return `/practice/${getReinforcePracticeMode(progress)}?cards=${encodeURIComponent(
+    cardIds.join(","),
   )}`;
 }
 
@@ -221,9 +232,13 @@ export default function StatsPage() {
               {visualDueCards.length + oralDueCards.length}
             </p>
           </div>
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/20 text-white shadow-lg ring-1 ring-white/25">
+          <Link
+            aria-label="Ver linea de tiempo de repasos"
+            className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/20 text-white shadow-lg ring-1 ring-white/25 transition active:scale-[0.96]"
+            href="/stats/timeline"
+          >
             <BarChart3 aria-hidden="true" size={28} />
-          </div>
+          </Link>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <div className="rounded-lg bg-white/15 p-3 ring-1 ring-white/20">
@@ -374,7 +389,11 @@ export default function StatsPage() {
             return (
               <Link
                 className="group block rounded-lg bg-gradient-to-br from-white to-red-50/70 p-4 shadow-sm ring-1 ring-red-100 transition active:scale-[0.98]"
-                href={getReinforcePracticeHref(card, progress)}
+                href={getReinforcePracticeHref(
+                  card,
+                  progress,
+                  difficultCards.map((item) => item.card),
+                )}
                 key={card.id}
               >
                 <div className="flex items-start justify-between gap-3">

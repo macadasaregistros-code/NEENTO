@@ -59,16 +59,18 @@ export default function VisualPracticePage() {
     selectedCategory,
     setSelectedCategory,
   } = usePracticeCategoryFilter(cards, mode, "visual");
-  const practiceCardIdFilter = usePracticeCardIdFilter();
+  const { cardIds: practiceCardIds, cardIdSet: practiceCardIdFilter } =
+    usePracticeCardIdFilter();
   const hasPracticeCardIdFilter = practiceCardIdFilter.size > 0;
+  const cardsById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const filteredCards = useMemo(
     () =>
-      cards.filter((card) =>
-        hasPracticeCardIdFilter
-          ? practiceCardIdFilter.has(card.id)
-          : matchesSelectedCategory(card),
-      ),
-    [cards, hasPracticeCardIdFilter, matchesSelectedCategory, practiceCardIdFilter],
+      hasPracticeCardIdFilter
+        ? practiceCardIds
+            .map((cardId) => cardsById.get(cardId))
+            .filter((card): card is (typeof cards)[number] => Boolean(card))
+        : cards.filter(matchesSelectedCategory),
+    [cards, cardsById, hasPracticeCardIdFilter, matchesSelectedCategory, practiceCardIds],
   );
   const filteredVisualDueCards = useMemo(
     () =>
@@ -78,7 +80,9 @@ export default function VisualPracticePage() {
     [hasPracticeCardIdFilter, matchesSelectedCategory, visualDueCards],
   );
   const orderedDueCards = orderDueCards(filteredVisualDueCards, sessionSeed);
-  const orderedFreePracticeCards = orderPracticeCards(filteredCards, sessionSeed);
+  const orderedFreePracticeCards = hasPracticeCardIdFilter
+    ? filteredCards
+    : orderPracticeCards(filteredCards, sessionSeed);
   const unreviewedDueCards = orderedDueCards.filter(
     ({ card }) => !reviewedSessionCardIds.has(card.id),
   );
@@ -161,6 +165,9 @@ export default function VisualPracticePage() {
 
     if (isFreePractice) {
       setFreePracticeIndex((index) => index + 1);
+      if (hasPracticeCardIdFilter) {
+        reviewCard(current.card.id, "visual", result);
+      }
     } else {
       setReviewedSessionCardIds((currentIds) => {
         const nextIds = new Set(currentIds);
@@ -208,7 +215,7 @@ export default function VisualPracticePage() {
   }
 
   function handleMatchingCardMatched(card: VocabularyCard) {
-    if (isFreePractice) {
+    if (isFreePractice && !hasPracticeCardIdFilter) {
       return;
     }
 

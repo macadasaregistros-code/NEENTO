@@ -27,5 +27,11 @@ export function usePracticeCardIdFilter() {
     setCardIds(parseCardIds(window.location.search));
   }, []);
 
-  return useMemo(() => new Set(cardIds), [cardIds]);
+  return useMemo(
+    () => ({
+      cardIds,
+      cardIdSet: new Set(cardIds),
+    }),
+    [cardIds],
+  );
 }

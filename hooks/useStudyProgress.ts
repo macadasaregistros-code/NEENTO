@@ -9,6 +9,7 @@ import {
   type AppPersona,
 } from "@/lib/app-persona";
 import { mockCards, mockProgress } from "@/lib/mock-data";
+import { recordReviewActivity } from "@/lib/review-activity";
 import {
   createInitialProgress,
   getDueCards,
@@ -430,6 +431,10 @@ export function useStudyProgress() {
       const currentProgress =
         progressByCardId.get(cardId) ?? createInitialProgress(cardId);
       const updatedProgress = updateProgress(currentProgress, reviewMode, result);
+      const reviewedAt =
+        reviewMode === "visual"
+          ? updatedProgress.lastVisualReviewAt
+          : updatedProgress.lastOralReviewAt;
 
       setProgressList((current) => {
         const hasProgress = current.some((progress) => progress.cardId === cardId);
@@ -443,6 +448,13 @@ export function useStudyProgress() {
         );
       });
 
+      recordReviewActivity(targetPersona, {
+        cardId,
+        result,
+        reviewMode,
+        reviewedAt: reviewedAt ?? new Date().toISOString(),
+      });
+
       if (userId) {
         saveSupabaseProgress(updatedProgress, userId).catch(() => {
           setSyncError(config.copy.sync.saveFailed);
@@ -454,6 +466,7 @@ export function useStudyProgress() {
       config.copy.sync.saveFailed,
       progressByCardId,
       targetUserId,
+      targetPersona,
       userId,
     ],
   );

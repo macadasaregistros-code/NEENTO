@@ -55,16 +55,18 @@ export default function OralPracticePage() {
     selectedCategory,
     setSelectedCategory,
   } = usePracticeCategoryFilter(cards, mode, "oral");
-  const practiceCardIdFilter = usePracticeCardIdFilter();
+  const { cardIds: practiceCardIds, cardIdSet: practiceCardIdFilter } =
+    usePracticeCardIdFilter();
   const hasPracticeCardIdFilter = practiceCardIdFilter.size > 0;
+  const cardsById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const filteredCards = useMemo(
     () =>
-      cards.filter((card) =>
-        hasPracticeCardIdFilter
-          ? practiceCardIdFilter.has(card.id)
-          : matchesSelectedCategory(card),
-      ),
-    [cards, hasPracticeCardIdFilter, matchesSelectedCategory, practiceCardIdFilter],
+      hasPracticeCardIdFilter
+        ? practiceCardIds
+            .map((cardId) => cardsById.get(cardId))
+            .filter((card): card is (typeof cards)[number] => Boolean(card))
+        : cards.filter(matchesSelectedCategory),
+    [cards, cardsById, hasPracticeCardIdFilter, matchesSelectedCategory, practiceCardIds],
   );
   const filteredOralDueCards = useMemo(
     () =>
@@ -74,7 +76,9 @@ export default function OralPracticePage() {
     [hasPracticeCardIdFilter, matchesSelectedCategory, oralDueCards],
   );
   const orderedDueCards = orderDueCards(filteredOralDueCards, sessionSeed);
-  const orderedFreePracticeCards = orderPracticeCards(filteredCards, sessionSeed);
+  const orderedFreePracticeCards = hasPracticeCardIdFilter
+    ? filteredCards
+    : orderPracticeCards(filteredCards, sessionSeed);
   const unreviewedDueCards = orderedDueCards.filter(
     ({ card }) => !reviewedSessionCardIds.has(card.id),
   );
@@ -167,6 +171,9 @@ export default function OralPracticePage() {
 
     if (isFreePractice) {
       setFreePracticeIndex((index) => index + 1);
+      if (hasPracticeCardIdFilter) {
+        reviewCard(current.card.id, "oral", result);
+      }
     } else {
       setReviewedSessionCardIds((currentIds) => {
         const nextIds = new Set(currentIds);
