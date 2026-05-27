@@ -10,6 +10,7 @@ import { PracticeCategorySelect } from "@/components/PracticeCategorySelect";
 import { SwipeCard } from "@/components/SwipeCard";
 import { VisualMatchingBoard } from "@/components/VisualMatchingBoard";
 import { useLearningMode } from "@/hooks/useLearningMode";
+import { usePracticeCardIdFilter } from "@/hooks/usePracticeCardIdFilter";
 import { usePracticeCategoryFilter } from "@/hooks/usePracticeCategoryFilter";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import {
@@ -58,13 +59,23 @@ export default function VisualPracticePage() {
     selectedCategory,
     setSelectedCategory,
   } = usePracticeCategoryFilter(cards, mode, "visual");
+  const practiceCardIdFilter = usePracticeCardIdFilter();
+  const hasPracticeCardIdFilter = practiceCardIdFilter.size > 0;
   const filteredCards = useMemo(
-    () => cards.filter(matchesSelectedCategory),
-    [cards, matchesSelectedCategory],
+    () =>
+      cards.filter((card) =>
+        hasPracticeCardIdFilter
+          ? practiceCardIdFilter.has(card.id)
+          : matchesSelectedCategory(card),
+      ),
+    [cards, hasPracticeCardIdFilter, matchesSelectedCategory, practiceCardIdFilter],
   );
   const filteredVisualDueCards = useMemo(
-    () => visualDueCards.filter(({ card }) => matchesSelectedCategory(card)),
-    [matchesSelectedCategory, visualDueCards],
+    () =>
+      hasPracticeCardIdFilter
+        ? []
+        : visualDueCards.filter(({ card }) => matchesSelectedCategory(card)),
+    [hasPracticeCardIdFilter, matchesSelectedCategory, visualDueCards],
   );
   const orderedDueCards = orderDueCards(filteredVisualDueCards, sessionSeed);
   const orderedFreePracticeCards = orderPracticeCards(filteredCards, sessionSeed);
@@ -121,6 +132,18 @@ export default function VisualPracticePage() {
     setFreePracticeIndex(0);
     setReviewedSessionCardIds(new Set());
   }, [selectedCategory]);
+
+  useEffect(() => {
+    if (!hasPracticeCardIdFilter) {
+      return;
+    }
+
+    setFeedback(null);
+    setSessionSeed(createPracticeSessionSeed());
+    setIsFreePractice(true);
+    setFreePracticeIndex(0);
+    setReviewedSessionCardIds(new Set());
+  }, [hasPracticeCardIdFilter, practiceCardIdFilter]);
 
   useEffect(() => {
     if (!feedback) {

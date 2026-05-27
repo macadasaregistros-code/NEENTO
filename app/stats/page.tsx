@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Flame, Layers3, Info, Trophy, Volume2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BarChart3,
+  Flame,
+  Layers3,
+  Info,
+  Trophy,
+  Volume2,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -12,7 +21,7 @@ import { useJjuAudioRecords } from "@/hooks/useJjuAudioRecords";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import { getCardStatus } from "@/lib/srs";
-import type { CardStatus, VocabularyCard } from "@/types/card";
+import type { CardProgress, CardStatus, VocabularyCard } from "@/types/card";
 
 const statusOrder: CardStatus[] = [
   "new",
@@ -90,6 +99,16 @@ function getAverageLevel(
   return Math.round((total / cards.length) * 10) / 10;
 }
 
+function getReinforcePracticeMode(progress: CardProgress): "oral" | "visual" {
+  return progress.oralFailCount >= progress.visualFailCount ? "oral" : "visual";
+}
+
+function getReinforcePracticeHref(card: VocabularyCard, progress: CardProgress): string {
+  return `/practice/${getReinforcePracticeMode(progress)}?cards=${encodeURIComponent(
+    card.id,
+  )}`;
+}
+
 export default function StatsPage() {
   const { config, mode } = useLearningMode();
   const copy = config.copy;
@@ -107,7 +126,12 @@ export default function StatsPage() {
   const [expandedStatus, setExpandedStatus] = useState<CardStatus | null>(null);
   const isJju = mode === "ko_es";
   const accentClass = isJju ? "text-sky-700" : "text-emerald-700";
-  const barClass = isJju ? "bg-sky-500" : "bg-emerald-500";
+  const barClass = isJju
+    ? "bg-gradient-to-r from-sky-500 via-cyan-400 to-violet-500"
+    : "bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-500";
+  const heroClass = isJju
+    ? "bg-gradient-to-br from-sky-600 via-cyan-500 to-violet-500 ring-sky-100"
+    : "bg-gradient-to-br from-emerald-600 via-teal-500 to-sky-500 ring-emerald-100";
   const text = isJju ? statsText.jju : statsText.daiki;
   const statusDescriptions = isJju
     ? statusDescriptionsByMode.jju
@@ -189,30 +213,30 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <section className="rounded-lg bg-white p-5 shadow-soft">
+      <section className={`overflow-hidden rounded-lg p-5 text-white shadow-soft ring-1 ${heroClass}`}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold text-slate-500">{copy.home.readyReviews}</p>
-            <p className="mt-1 text-5xl font-black leading-none text-ink">
+            <p className="text-sm font-bold text-white/80">{copy.home.readyReviews}</p>
+            <p className="mt-1 text-5xl font-black leading-none text-white">
               {visualDueCards.length + oralDueCards.length}
             </p>
           </div>
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-950 text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/20 text-white shadow-lg ring-1 ring-white/25">
             <BarChart3 aria-hidden="true" size={28} />
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+          <div className="rounded-lg bg-white/15 p-3 ring-1 ring-white/20">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
               {copy.home.visual}
             </p>
-            <p className="mt-1 text-xl font-black text-ink">{visualDueCards.length}</p>
+            <p className="mt-1 text-xl font-black text-white">{visualDueCards.length}</p>
           </div>
-          <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+          <div className="rounded-lg bg-white/15 p-3 ring-1 ring-white/20">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
               {copy.home.oral}
             </p>
-            <p className="mt-1 text-xl font-black text-ink">{oralDueCards.length}</p>
+            <p className="mt-1 text-xl font-black text-white">{oralDueCards.length}</p>
           </div>
         </div>
       </section>
@@ -225,14 +249,30 @@ export default function StatsPage() {
       ) : null}
 
       <section className="grid grid-cols-2 gap-3">
-        <StatCard icon={<Layers3 size={20} />} label={copy.home.cards} value={cards.length} />
+        <StatCard
+          icon={<Layers3 size={20} />}
+          label={copy.home.cards}
+          tone="cards"
+          value={cards.length}
+        />
         <StatCard
           icon={<Flame size={20} />}
           label={copy.home.progressed}
+          tone="progress"
           value={`${reviewedCards.length}/${cards.length}`}
         />
-        <StatCard icon={<Trophy size={20} />} label={text.strong} value={strongCards.length} />
-        <StatCard icon={<Trophy size={20} />} label={text.mastered} value={masteredCards.length} />
+        <StatCard
+          icon={<Trophy size={20} />}
+          label={text.strong}
+          tone="strong"
+          value={strongCards.length}
+        />
+        <StatCard
+          icon={<Trophy size={20} />}
+          label={text.mastered}
+          tone="mastered"
+          value={masteredCards.length}
+        />
       </section>
 
       {isJju && isOwner ? (
@@ -328,23 +368,36 @@ export default function StatsPage() {
       <section className="space-y-3">
         <p className="px-1 text-sm font-black text-ink">{text.reinforce}</p>
         {difficultCards.length > 0 ? (
-          difficultCards.map(({ card, fails }) => (
-            <article
-              className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100"
-              key={card.id}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-black text-ink">{card.learningText}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">{card.supportText}</p>
+          difficultCards.map(({ card, fails, progress }) => {
+            const reinforceMode = getReinforcePracticeMode(progress);
+
+            return (
+              <Link
+                className="group block rounded-lg bg-gradient-to-br from-white to-red-50/70 p-4 shadow-sm ring-1 ring-red-100 transition active:scale-[0.98]"
+                href={getReinforcePracticeHref(card, progress)}
+                key={card.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-black text-ink">{card.learningText}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      {card.supportText}
+                    </p>
+                  </div>
+                  <CardSourceBadge card={card} />
                 </div>
-                <CardSourceBadge card={card} />
-              </div>
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-red-500">
-                {fails} {text.fails}
-              </p>
-            </article>
-          ))
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-red-500">
+                    {fails} {text.fails}
+                  </p>
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-black text-white shadow-sm shadow-red-100 transition group-active:scale-[0.97]">
+                    {reinforceMode === "oral" ? copy.home.oral : copy.home.visual}
+                    <ArrowRight aria-hidden="true" size={14} />
+                  </span>
+                </div>
+              </Link>
+            );
+          })
         ) : (
           <p className="rounded-lg bg-white p-4 text-sm font-bold text-slate-500 shadow-sm ring-1 ring-slate-100">
             {text.difficultEmpty}
@@ -358,19 +411,42 @@ export default function StatsPage() {
 function StatCard({
   icon,
   label,
+  tone,
   value,
 }: {
   icon: ReactNode;
   label: string;
+  tone: "cards" | "progress" | "strong" | "mastered";
   value: number | string;
 }) {
+  const toneClass = {
+    cards: {
+      card: "bg-indigo-50 text-indigo-950 ring-indigo-100",
+      icon: "bg-indigo-600 text-white shadow-indigo-100",
+    },
+    mastered: {
+      card: "bg-sky-50 text-sky-950 ring-sky-100",
+      icon: "bg-sky-600 text-white shadow-sky-100",
+    },
+    progress: {
+      card: "bg-amber-50 text-amber-950 ring-amber-100",
+      icon: "bg-amber-500 text-white shadow-amber-100",
+    },
+    strong: {
+      card: "bg-emerald-50 text-emerald-950 ring-emerald-100",
+      icon: "bg-emerald-600 text-white shadow-emerald-100",
+    },
+  }[tone];
+
   return (
-    <article className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-100">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+    <article className={`rounded-lg p-4 shadow-sm ring-1 ${toneClass.card}`}>
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-lg shadow-lg ${toneClass.icon}`}
+      >
         {icon}
       </div>
-      <p className="mt-3 text-2xl font-black text-ink">{value}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-500">{label}</p>
+      <p className="mt-3 text-2xl font-black">{value}</p>
+      <p className="mt-1 text-sm font-semibold opacity-70">{label}</p>
     </article>
   );
 }
