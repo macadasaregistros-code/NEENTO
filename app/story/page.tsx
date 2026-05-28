@@ -1,12 +1,13 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { CircleHelp, Sparkles } from "lucide-react";
+import { CircleHelp, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { PointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { useAiStory } from "@/hooks/useAiStory";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import {
@@ -182,18 +183,33 @@ export default function StoryPage() {
     () => getStorySourceCards(cards, recentReviewedCards),
     [cards, recentReviewedCards],
   );
-  const storyCards = useMemo(
+  const fallbackStoryCards = useMemo(
     () => selectStoryCards(storySourceCards, storyVersion),
     [storySourceCards, storyVersion],
   );
-  const storyTerms = useMemo(
-    () => getStoryTerms(storyCards, mode),
-    [mode, storyCards],
+  const fallbackStoryTerms = useMemo(
+    () => getStoryTerms(fallbackStoryCards, mode),
+    [fallbackStoryCards, mode],
   );
-  const story = useMemo(
-    () => buildLearningStory(storyTerms, mode, storyVersion, storyLevel),
-    [mode, storyLevel, storyTerms, storyVersion],
+  const storyPoolTerms = useMemo(
+    () => getStoryTerms(storySourceCards, mode, 50),
+    [mode, storySourceCards],
   );
+  const fallbackStory = useMemo(
+    () => buildLearningStory(fallbackStoryTerms, mode, storyVersion, storyLevel),
+    [fallbackStoryTerms, mode, storyLevel, storyVersion],
+  );
+  const {
+    error: aiStoryError,
+    isLoading: isAiStoryLoading,
+    result: aiStoryResult,
+  } = useAiStory({
+    level: storyLevel,
+    mode,
+    terms: storyPoolTerms,
+    version: storyVersion,
+  });
+  const story = aiStoryResult?.story ?? (!isAiStoryLoading ? fallbackStory : null);
   const questionHref = useMemo(
     () => `/story/questions?level=${storyLevel}&version=${storyVersion}`,
     [storyLevel, storyVersion],
@@ -239,14 +255,31 @@ export default function StoryPage() {
 
       <button
         className={`flex h-14 items-center justify-center gap-2 rounded-lg bg-gradient-to-r px-5 text-sm font-black text-white shadow-lg shadow-amber-200 transition active:scale-[0.98] ${accentClass}`}
+        disabled={isAiStoryLoading}
         onClick={createNextStory}
         type="button"
       >
-        <Sparkles aria-hidden="true" size={19} />
+        {isAiStoryLoading ? (
+          <Loader2 aria-hidden="true" className="animate-spin" size={19} />
+        ) : (
+          <Sparkles aria-hidden="true" size={19} />
+        )}
         Crear nueva historia
       </button>
 
-      {story ? (
+      {isAiStoryLoading && !story ? (
+        <section className="rounded-lg bg-white p-5 text-center shadow-soft ring-1 ring-amber-100">
+          <Loader2
+            aria-hidden="true"
+            className="mx-auto animate-spin text-amber-500"
+            size={30}
+          />
+          <p className="mt-3 text-lg font-black text-ink">Creando historia</p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+            Usando tus ultimas palabras repasadas.
+          </p>
+        </section>
+      ) : story ? (
         <motion.article
           className="select-none rounded-lg bg-white p-5 shadow-soft ring-1 ring-amber-100"
           drag="y"
@@ -282,6 +315,12 @@ export default function StoryPage() {
           <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.12em] text-slate-400">
             {isTranslationRevealed ? "desliza abajo" : "desliza arriba"}
           </p>
+
+          {aiStoryError ? (
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-800 ring-1 ring-amber-100">
+              Historia local temporal.
+            </p>
+          ) : null}
 
           <Link
             className="mx-auto mt-4 flex h-10 w-fit items-center justify-center gap-2 rounded-full bg-ink px-4 text-xs font-black text-white shadow-soft transition active:scale-[0.98]"

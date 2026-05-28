@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, ChevronLeft, CircleHelp, X } from "lucide-react";
+import { Check, ChevronLeft, CircleHelp, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useAiStory } from "@/hooks/useAiStory";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { useStudyProgress } from "@/hooks/useStudyProgress";
 import {
@@ -78,37 +79,53 @@ export default function StoryQuestionsPage() {
     () => getStorySourceCards(cards, recentReviewedCards),
     [cards, recentReviewedCards],
   );
-  const storyCards = useMemo(
+  const fallbackStoryCards = useMemo(
     () => selectStoryCards(storySourceCards, storyVersion),
     [storySourceCards, storyVersion],
   );
-  const storyTerms = useMemo(
-    () => getStoryTerms(storyCards, mode),
-    [mode, storyCards],
+  const fallbackStoryTerms = useMemo(
+    () => getStoryTerms(fallbackStoryCards, mode),
+    [fallbackStoryCards, mode],
+  );
+  const storyPoolTerms = useMemo(
+    () => getStoryTerms(storySourceCards, mode, 50),
+    [mode, storySourceCards],
   );
   const candidateTerms = useMemo(
     () => getStoryTerms(cards, mode, 200),
     [cards, mode],
   );
-  const story = useMemo(
-    () => buildLearningStory(storyTerms, mode, storyVersion, storyLevel),
-    [mode, storyLevel, storyTerms, storyVersion],
+  const fallbackStory = useMemo(
+    () => buildLearningStory(fallbackStoryTerms, mode, storyVersion, storyLevel),
+    [fallbackStoryTerms, mode, storyLevel, storyVersion],
   );
-  const questions = useMemo(
+  const fallbackQuestions = useMemo(
     () =>
-      story
-        ? buildStoryQuestions(story, candidateTerms, mode, storyVersion)
+      fallbackStory
+        ? buildStoryQuestions(fallbackStory, candidateTerms, mode, storyVersion)
         : [],
-    [candidateTerms, mode, story, storyVersion],
+    [candidateTerms, fallbackStory, mode, storyVersion],
   );
+  const {
+    isLoading: isAiStoryLoading,
+    result: aiStoryResult,
+  } = useAiStory({
+    level: storyLevel,
+    mode,
+    terms: storyPoolTerms,
+    version: storyVersion,
+  });
+  const story = aiStoryResult?.story ?? (!isAiStoryLoading ? fallbackStory : null);
+  const questions = aiStoryResult?.questions ?? (!isAiStoryLoading ? fallbackQuestions : []);
   const currentQuestion = questions[currentQuestionIndex];
   const isComplete = questions.length > 0 && currentQuestionIndex >= questions.length;
+  const questionSignature = questions.map((question) => question.id).join("|");
 
   useEffect(() => {
     setCurrentQuestionIndex(0);
     setSelectedOptionId(null);
     setScore(0);
-  }, [mode, storyLevel, storyVersion]);
+  }, [mode, questionSignature, storyLevel, storyVersion]);
 
   function handleAnswer(optionId: string) {
     if (!currentQuestion || selectedOptionId) {
@@ -157,7 +174,19 @@ export default function StoryQuestionsPage() {
         </div>
       </header>
 
-      {currentQuestion ? (
+      {isAiStoryLoading && !currentQuestion ? (
+        <section className="rounded-lg bg-white p-5 text-center shadow-soft ring-1 ring-amber-100">
+          <Loader2
+            aria-hidden="true"
+            className="mx-auto animate-spin text-amber-500"
+            size={30}
+          />
+          <p className="mt-3 text-lg font-black text-ink">Preparando preguntas</p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+            Usando la historia creada con tus ultimas palabras.
+          </p>
+        </section>
+      ) : currentQuestion ? (
         <section className="rounded-lg bg-white p-5 shadow-soft ring-1 ring-amber-100">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
