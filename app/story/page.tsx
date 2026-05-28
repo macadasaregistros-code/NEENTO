@@ -210,6 +210,9 @@ export default function StoryPage() {
     version: storyVersion,
   });
   const story = aiStoryResult?.story ?? (!isAiStoryLoading ? fallbackStory : null);
+  const isLocalStoryFallback = Boolean(
+    aiStoryError || aiStoryResult?.source === "local",
+  );
   const questionHref = useMemo(
     () => `/story/questions?level=${storyLevel}&version=${storyVersion}`,
     [storyLevel, storyVersion],
@@ -316,7 +319,7 @@ export default function StoryPage() {
             {isTranslationRevealed ? "desliza abajo" : "desliza arriba"}
           </p>
 
-          {aiStoryError ? (
+          {isLocalStoryFallback ? (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-800 ring-1 ring-amber-100">
               Historia local temporal.
             </p>
