@@ -33,7 +33,16 @@ function readCachedStory(cacheKey: string): AiStoryResult | null {
 
     const parsed = JSON.parse(rawValue);
 
-    return isAiStoryResult(parsed) ? parsed : null;
+    if (!isAiStoryResult(parsed)) {
+      return null;
+    }
+
+    if (parsed.source !== "ai") {
+      window.sessionStorage.removeItem(cacheKey);
+      return null;
+    }
+
+    return parsed;
   } catch {
     return null;
   }
@@ -104,7 +113,10 @@ export function useAiStory({
           throw new Error("La respuesta de historia no tiene el formato esperado.");
         }
 
-        writeCachedStory(cacheKey, payload);
+        if (payload.source === "ai") {
+          writeCachedStory(cacheKey, payload);
+        }
+
         setResult(payload);
       })
       .catch((nextError: unknown) => {
