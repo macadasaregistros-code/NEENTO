@@ -20,7 +20,7 @@ import {
   createSupabaseCard,
   fetchAppProfiles,
   fetchSupabaseStudyData,
-  repairSupabasePrivateCardMode,
+  publishSupabaseModeCards,
   saveSupabaseProgress,
   type AppProfile,
 } from "@/lib/supabase-data";
@@ -206,7 +206,6 @@ function toNewCardInput(card: VocabularyCard): NewVocabularyCardInput {
 
 async function syncLocalCardsToSupabase(
   localCards: VocabularyCard[],
-  userId: string,
 ): Promise<{
   failedCards: VocabularyCard[];
   syncedCards: VocabularyCard[];
@@ -223,7 +222,7 @@ async function syncLocalCardsToSupabase(
 
   for (const card of localCards) {
     try {
-      const syncedCard = await createSupabaseCard(toNewCardInput(card), userId);
+      const syncedCard = await createSupabaseCard(toNewCardInput(card));
 
       syncedCards.push(syncedCard);
     } catch {
@@ -302,11 +301,11 @@ export function useStudyProgress() {
         resolvedTargetUserId === currentUser.id;
 
       const syncedLocalCards = canMutate
-        ? await syncLocalCardsToSupabase(storedCards, currentUser.id)
+        ? await syncLocalCardsToSupabase(storedCards)
         : { failedCards: [], syncedCards: [] };
 
       if (canMutate) {
-        await repairSupabasePrivateCardMode(currentUser.id, mode).catch(() => undefined);
+        await publishSupabaseModeCards(currentUser.id, mode).catch(() => undefined);
       }
 
       const studyData = await fetchSupabaseStudyData(
@@ -505,7 +504,7 @@ export function useStudyProgress() {
       let createdCard: VocabularyCard;
 
       try {
-        createdCard = await createSupabaseCard(input, userId);
+        createdCard = await createSupabaseCard(input);
       } catch (nextError) {
         const message = getErrorMessage(nextError);
 

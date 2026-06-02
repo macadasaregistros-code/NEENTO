@@ -381,7 +381,7 @@ export async function saveSupabaseProgress(
   }
 }
 
-export async function repairSupabasePrivateCardMode(
+export async function publishSupabaseModeCards(
   userId: string,
   mode: LearningMode,
 ): Promise<void> {
@@ -392,6 +392,7 @@ export async function repairSupabasePrivateCardMode(
       learning_language: isJapaneseMode ? "ja" : "es",
       learning_mode: mode,
       support_language: isJapaneseMode ? "es" : "ko",
+      user_id: null,
     })
     .eq("user_id", userId)
     .eq("is_starter", false);
@@ -403,7 +404,6 @@ export async function repairSupabasePrivateCardMode(
 
 export async function createSupabaseCard(
   input: NewVocabularyCardInput,
-  userId: string,
 ): Promise<VocabularyCard> {
   const isJapaneseMode = input.learningMode === "ja_es";
   const learningText = input.learningText.trim();
@@ -411,7 +411,7 @@ export async function createSupabaseCard(
   const supportText = input.supportText.trim();
   const supportReading = input.supportReading?.trim() || null;
   const payload = {
-    user_id: userId,
+    user_id: null,
     is_starter: false,
     starter_group: null,
     display_order: Math.floor(Date.now() / 1000),
