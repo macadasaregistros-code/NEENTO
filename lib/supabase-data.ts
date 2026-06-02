@@ -82,6 +82,7 @@ export interface AppProfile {
 
 let appProfilesCache: AppProfile[] | null = null;
 let appProfilesPromise: Promise<AppProfile[]> | null = null;
+const CARD_QUERY_PAGE_SIZE = 1000;
 
 async function attachJjuAudio(cards: VocabularyCard[]): Promise<VocabularyCard[]> {
   const audioRecords = await fetchJjuAudioRecords();
@@ -273,6 +274,37 @@ async function fetchAppProfilesFromSupabase(): Promise<AppProfile[]> {
     .filter((profile): profile is AppProfile => Boolean(profile));
 }
 
+async function fetchCardRows(targetMode?: LearningMode): Promise<CardRow[] | null> {
+  const cardRows: CardRow[] = [];
+
+  for (let from = 0; ; from += CARD_QUERY_PAGE_SIZE) {
+    let cardsQuery = supabase
+      .from("cards")
+      .select("*")
+      .order("is_starter", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    if (targetMode) {
+      cardsQuery = cardsQuery.eq("learning_mode", targetMode);
+    }
+
+    const { data, error } = await cardsQuery.range(
+      from,
+      from + CARD_QUERY_PAGE_SIZE - 1,
+    );
+
+    if (error || !data) {
+      return null;
+    }
+
+    cardRows.push(...(data as CardRow[]));
+
+    if (data.length < CARD_QUERY_PAGE_SIZE) {
+      return cardRows;
+    }
+  }
+}
+
 export async function fetchSupabaseStudyData(
   targetUserId?: string,
   targetMode?: LearningMode,
@@ -286,18 +318,14 @@ export async function fetchSupabaseStudyData(
       getModeForPersona(profile.appPersona),
     ]),
   );
-  const { data: cardRows, error: cardsError } = await supabase
-    .from("cards")
-    .select("*")
-    .order("is_starter", { ascending: false })
-    .order("created_at", { ascending: true });
+  const cardRows = await fetchCardRows(targetMode);
 
-  if (cardsError || !cardRows || cardRows.length === 0) {
+  if (!cardRows || cardRows.length === 0) {
     return null;
   }
 
   const cards = await attachJjuAudio(
-    (cardRows as CardRow[]).map((row) => {
+    cardRows.map((row) => {
       const fallbackMode =
         !row.is_starter && row.user_id
           ? fallbackModeByUserId.get(row.user_id) ??
