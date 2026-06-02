@@ -39,9 +39,32 @@ export const AI_STORY_USED_TERM_MIN = 8;
 
 const STORY_WORD_RANGES: Record<StoryLevel, { max: number; min: number; target: number }> = {
   A1: { max: 100, min: 50, target: 75 },
-  A2: { max: 150, min: 100, target: 125 },
-  B1: { max: 200, min: 150, target: 175 },
+  A2: { max: 100, min: 50, target: 75 },
+  B1: { max: 100, min: 50, target: 75 },
 };
+
+export const AI_STORY_CATEGORIES = [
+  "Fabula infantil con ensenanza",
+  "Pequeno cuento de animales",
+  "Aventura en un bosque",
+  "Historia de comida",
+  "Viaje corto",
+  "Dia cotidiano",
+  "Amistad",
+  "Mini misterio",
+  "Humor simple",
+  "Historia romantica suave",
+  "Escuela o aprendizaje",
+  "Familia",
+  "Mercado o compras",
+  "Restaurante",
+  "Mascotas",
+  "Sueno extrano",
+  "Fantasia ligera",
+  "Un error gracioso",
+  "Conversacion entre dos personas",
+  "Historia con moraleja",
+] as const;
 
 function hashText(value: string): string {
   let hash = 5381;
@@ -81,6 +104,13 @@ function pushTextSegment(segments: StorySegment[], value: string): void {
 
 export function getStoryWordRange(level: StoryLevel) {
   return STORY_WORD_RANGES[level];
+}
+
+export function getAiStoryCategory(version: number): string {
+  const categoryIndex =
+    Math.abs(Math.floor(version)) % AI_STORY_CATEGORIES.length;
+
+  return AI_STORY_CATEGORIES[categoryIndex];
 }
 
 export function getStoryLanguagePlan(mode: LearningMode): StoryLanguagePlan {
@@ -204,7 +234,7 @@ export function buildAiStoryCacheKey(request: AiStoryRequestBody): string {
     version: request.version,
   });
 
-  return `neento-ai-story-v1:${hashText(basis)}`;
+  return `neento-ai-story-v2:${hashText(basis)}`;
 }
 
 export function getTermsUsedInText(text: string, terms: StoryTerm[]): StoryTerm[] {

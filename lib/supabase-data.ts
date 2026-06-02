@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { AppPersona } from "@/lib/app-persona";
+import { getModeForPersona, type AppPersona } from "@/lib/app-persona";
 import { getJapaneseRecognitionVariants } from "@/lib/japanese-recognition";
 import { romajiToHiragana } from "@/lib/speech";
 import { createInitialProgress, normalizeProgress } from "@/lib/srs";
@@ -108,7 +108,11 @@ async function attachJjuAudio(cards: VocabularyCard[]): Promise<VocabularyCard[]
   });
 }
 
-function getLegacyMode(row: CardRow): LearningMode {
+function getLegacyMode(row: CardRow, fallbackMode?: LearningMode): LearningMode {
+  if (!row.is_starter && fallbackMode) {
+    return fallbackMode;
+  }
+
   return row.learning_mode ?? "ja_es";
 }
 
@@ -120,8 +124,9 @@ function getLegacySupportLanguage(mode: LearningMode): LanguageCode {
   return mode === "ko_es" ? "ko" : "es";
 }
 
-function toVocabularyCard(row: CardRow): VocabularyCard {
-  const learningMode = getLegacyMode(row);
+function toVocabularyCard(row: CardRow, fallbackMode?: LearningMode): VocabularyCard {
+  const learningMode = getLegacyMode(row, fallbackMode);
+  const shouldUseFallbackMode = !row.is_starter && Boolean(fallbackMode);
   const legacyRomaji = row.learning_reading ?? row.japanese_romaji;
   const generatedKana =
     learningMode === "ja_es" ? romajiToHiragana(legacyRomaji ?? row.learning_text ?? "") : "";
@@ -154,8 +159,12 @@ function toVocabularyCard(row: CardRow): VocabularyCard {
     displayOrder: row.display_order ?? undefined,
     type: row.type,
     learningMode,
-    learningLanguage: row.learning_language ?? getLegacyLearningLanguage(learningMode),
-    supportLanguage: row.support_language ?? getLegacySupportLanguage(learningMode),
+    learningLanguage: shouldUseFallbackMode
+      ? getLegacyLearningLanguage(learningMode)
+      : row.learning_language ?? getLegacyLearningLanguage(learningMode),
+    supportLanguage: shouldUseFallbackMode
+      ? getLegacySupportLanguage(learningMode)
+      : row.support_language ?? getLegacySupportLanguage(learningMode),
     learningText,
     learningReading: learningReading ?? undefined,
     supportText,
@@ -266,24 +275,38 @@ async function fetchAppProfilesFromSupabase(): Promise<AppProfile[]> {
 
 export async function fetchSupabaseStudyData(
   targetUserId?: string,
+  targetMode?: LearningMode,
+  appProfiles: AppProfile[] = [],
 ): Promise<StudyData | null> {
-  let cardsQuery = supabase
+  const resolvedAppProfiles =
+    appProfiles.length > 0 ? appProfiles : await fetchAppProfiles();
+  const fallbackModeByUserId = new Map(
+    resolvedAppProfiles.map((profile) => [
+      profile.id,
+      getModeForPersona(profile.appPersona),
+    ]),
+  );
+  const { data: cardRows, error: cardsError } = await supabase
     .from("cards")
     .select("*")
     .order("is_starter", { ascending: false })
     .order("created_at", { ascending: true });
 
-  if (targetUserId) {
-    cardsQuery = cardsQuery.or(`is_starter.eq.true,user_id.eq.${targetUserId}`);
-  }
-
-  const { data: cardRows, error: cardsError } = await cardsQuery;
-
   if (cardsError || !cardRows || cardRows.length === 0) {
     return null;
   }
 
-  const cards = await attachJjuAudio((cardRows as CardRow[]).map(toVocabularyCard));
+  const cards = await attachJjuAudio(
+    (cardRows as CardRow[]).map((row) => {
+      const fallbackMode =
+        !row.is_starter && row.user_id
+          ? fallbackModeByUserId.get(row.user_id) ??
+            (row.user_id === targetUserId ? targetMode : undefined)
+          : undefined;
+
+      return toVocabularyCard(row, fallbackMode);
+    }),
+  );
 
   if (!targetUserId) {
     return {
@@ -352,6 +375,26 @@ export async function saveSupabaseProgress(
   }
 
   const { error } = await supabase.from("card_progress").insert(payload);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function repairSupabasePrivateCardMode(
+  userId: string,
+  mode: LearningMode,
+): Promise<void> {
+  const isJapaneseMode = mode === "ja_es";
+  const { error } = await supabase
+    .from("cards")
+    .update({
+      learning_language: isJapaneseMode ? "ja" : "es",
+      learning_mode: mode,
+      support_language: isJapaneseMode ? "es" : "ko",
+    })
+    .eq("user_id", userId)
+    .eq("is_starter", false);
 
   if (error) {
     throw error;

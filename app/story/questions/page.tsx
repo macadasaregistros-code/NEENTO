@@ -88,8 +88,8 @@ export default function StoryQuestionsPage() {
     [fallbackStoryCards, mode],
   );
   const storyPoolTerms = useMemo(
-    () => getStoryTerms(storySourceCards, mode, 50),
-    [mode, storySourceCards],
+    () => getStoryTerms(recentReviewedCards, mode, 50),
+    [mode, recentReviewedCards],
   );
   const candidateTerms = useMemo(
     () => getStoryTerms(cards, mode, 200),

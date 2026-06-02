@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   AI_STORY_MIN_TERMS,
   buildStorySegmentsFromText,
+  getAiStoryCategory,
   getStoryLanguagePlan,
   getStoryWordRange,
   getTermsUsedInText,
@@ -93,6 +94,7 @@ function getGeminiModel(): string {
 
 function buildPrompt(request: AiStoryRequestBody): string {
   const plan = getStoryLanguagePlan(request.mode);
+  const requestedCategory = getAiStoryCategory(request.version);
   const wordRange = getStoryWordRange(request.level);
   const vocabulary = sanitizeStoryTerms(request.terms).map((term, index) => ({
     id: term.cardId,
@@ -107,11 +109,14 @@ function buildPrompt(request: AiStoryRequestBody): string {
     `Story language: ${plan.storyLanguage}.`,
     `Translation language: ${plan.translationLanguage}.`,
     `Question language: ${plan.questionLanguage}.`,
+    `Required story category: ${requestedCategory}. Use this exact category value in the JSON category field.`,
     "Use 8 to 15 vocabulary items from the provided list, naturally and exactly as written in the learning field.",
+    "The vocabulary JSON contains only the most recently reviewed words, ordered newest to oldest.",
     "Prioritize lower recentRank values because those are the latest reviewed words.",
+    "Do not add learning-language vocabulary that is not present in the vocabulary JSON.",
     "The story needs a beginning, a small conflict or situation, and a clear ending.",
     "Make it simple, pleasant, and useful for practical communication.",
-    "Vary the category: fable, food, travel, daily life, friendship, mystery, family, market, restaurant, pets, dream, gentle romance, or a funny mistake.",
+    "Do not reuse the same plot structure as a previous story. Build the plot around the required category.",
     ...plan.writingRules,
     "Return exactly this JSON shape:",
     '{"title":"...","category":"...","storyText":"...","translationText":"...","usedCardIds":["..."],"questions":[{"question":"...","options":["...","...","...","..."],"correctIndex":0}]}',
@@ -300,7 +305,7 @@ function createAiStoryResult(
   }
 
   const story: LearningStory = {
-    category: cleanText(payload.category) || "Historia",
+    category: getAiStoryCategory(request.version),
     level: request.level,
     sourceSegments: buildStorySegmentsFromText(storyText, usedTerms),
     terms: usedTerms,

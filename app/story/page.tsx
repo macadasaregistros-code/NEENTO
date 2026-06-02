@@ -192,8 +192,8 @@ export default function StoryPage() {
     [fallbackStoryCards, mode],
   );
   const storyPoolTerms = useMemo(
-    () => getStoryTerms(storySourceCards, mode, 50),
-    [mode, storySourceCards],
+    () => getStoryTerms(recentReviewedCards, mode, 50),
+    [mode, recentReviewedCards],
   );
   const fallbackStory = useMemo(
     () => buildLearningStory(fallbackStoryTerms, mode, storyVersion, storyLevel),

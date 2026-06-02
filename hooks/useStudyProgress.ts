@@ -20,6 +20,7 @@ import {
   createSupabaseCard,
   fetchAppProfiles,
   fetchSupabaseStudyData,
+  repairSupabasePrivateCardMode,
   saveSupabaseProgress,
   type AppProfile,
 } from "@/lib/supabase-data";
@@ -303,7 +304,16 @@ export function useStudyProgress() {
       const syncedLocalCards = canMutate
         ? await syncLocalCardsToSupabase(storedCards, currentUser.id)
         : { failedCards: [], syncedCards: [] };
-      const studyData = await fetchSupabaseStudyData(resolvedTargetUserId);
+
+      if (canMutate) {
+        await repairSupabasePrivateCardMode(currentUser.id, mode).catch(() => undefined);
+      }
+
+      const studyData = await fetchSupabaseStudyData(
+        resolvedTargetUserId,
+        mode,
+        appProfiles,
+      );
 
       return {
         canMutate,
@@ -375,7 +385,7 @@ export function useStudyProgress() {
     return () => {
       isMounted = false;
     };
-  }, [config.copy.sync, targetPersona]);
+  }, [config.copy.sync, mode, targetPersona]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -513,7 +523,7 @@ export function useStudyProgress() {
         setSyncError(config.copy.sync.saveFailed);
       });
 
-      fetchSupabaseStudyData(userId)
+      fetchSupabaseStudyData(userId, mode)
         .then((studyData) => {
           if (!studyData) {
             return;
@@ -539,6 +549,7 @@ export function useStudyProgress() {
       canMutateActiveMode,
       config.copy.sync.saveFailed,
       config.copy.sync.supabaseFailed,
+      mode,
       targetUserId,
       userId,
     ],
