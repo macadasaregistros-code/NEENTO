@@ -300,9 +300,7 @@ export function useStudyProgress() {
         resolvedCurrentPersona === targetPersona &&
         resolvedTargetUserId === currentUser.id;
 
-      const syncedLocalCards = canMutate
-        ? await syncLocalCardsToSupabase(storedCards)
-        : { failedCards: [], syncedCards: [] };
+      const syncedLocalCards = await syncLocalCardsToSupabase(storedCards);
 
       if (canMutate) {
         await publishSupabaseModeCards(currentUser.id, mode).catch(() => undefined);
