@@ -9,6 +9,10 @@ import {
   type AppPersona,
 } from "@/lib/app-persona";
 import { supabase } from "@/lib/supabase";
+import {
+  getSupabaseAuthErrorMessage,
+  withSupabaseAuthTimeout,
+} from "@/src/lib/supabase/errors";
 
 export type ProfileRole = "owner" | "worker";
 
@@ -64,20 +68,31 @@ export function useCurrentUser() {
     setIsLoading(true);
     setError(null);
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    try {
+      type SessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>;
+      const sessionResult = await withSupabaseAuthTimeout<SessionResult>(
+        supabase.auth.getSession(),
+      );
+      const {
+        data: { session },
+        error: sessionError,
+      } = sessionResult;
 
-    if (sessionError) {
+      if (sessionError) {
+        setUser(null);
+        setProfile(null);
+        setError(getSupabaseAuthErrorMessage(sessionError));
+        setIsLoading(false);
+        return;
+      }
+
+      applySession(session);
+    } catch (sessionError) {
       setUser(null);
       setProfile(null);
-      setError(sessionError.message);
+      setError(getSupabaseAuthErrorMessage(sessionError));
       setIsLoading(false);
-      return;
     }
-
-    applySession(session);
   }, [applySession]);
 
   useEffect(() => {
@@ -104,7 +119,7 @@ export function useCurrentUser() {
   }, [applySession, refresh]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => undefined);
     window.location.href = "/login";
   }, []);
 

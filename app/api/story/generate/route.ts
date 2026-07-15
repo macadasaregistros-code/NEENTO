@@ -21,6 +21,7 @@ import {
   type StoryQuestion,
   type StoryTerm,
 } from "@/lib/story";
+import { withSupabaseAuthTimeout } from "@/src/lib/supabase/errors";
 import { createClient } from "@/src/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -367,9 +368,17 @@ async function callGemini(request: AiStoryRequestBody): Promise<GeminiStoryPaylo
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const {
+      data: { user: resolvedUser },
+    } = await withSupabaseAuthTimeout(supabase.auth.getUser());
+
+    user = resolvedUser;
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (!user || !getPersonaForEmail(user.email)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

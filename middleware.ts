@@ -1,17 +1,56 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { withSupabaseAuthTimeout } from "@/src/lib/supabase/errors";
 import { createClient } from "@/utils/supabase/middleware";
 
 const publicRoutes = ["/login", "/auth", "/api"];
 
+function hasSupabaseAuthCookie(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"),
+    );
+}
+
+function redirectToLogin(request: NextRequest, redirectPath: string) {
+  const loginUrl = request.nextUrl.clone();
+
+  loginUrl.pathname = "/login";
+  loginUrl.search = "";
+  loginUrl.searchParams.set("redirectTo", redirectPath);
+
+  return NextResponse.redirect(loginUrl);
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
-  const { response, supabase } = createClient(request);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (pathname !== "/" && isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  if (!hasSupabaseAuthCookie(request)) {
+    return redirectToLogin(
+      request,
+      pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`,
+    );
+  }
+
+  const { response, supabase } = createClient(request);
+  let user = null;
+
+  try {
+    const {
+      data: { user: resolvedUser },
+    } = await withSupabaseAuthTimeout(supabase.auth.getUser());
+
+    user = resolvedUser;
+  } catch {
+    user = null;
+  }
 
   if (pathname === "/") {
     const entryUrl = request.nextUrl.clone();
@@ -27,17 +66,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user && !isPublicRoute) {
-    const loginUrl = request.nextUrl.clone();
     const redirectPath = `${pathname}${request.nextUrl.search}`;
 
-    loginUrl.pathname = "/login";
-    loginUrl.search = "";
-    loginUrl.searchParams.set(
-      "redirectTo",
+    return redirectToLogin(
+      request,
       pathname === "/" ? "/dashboard" : redirectPath,
     );
-
-    return NextResponse.redirect(loginUrl);
   }
 
   return response;

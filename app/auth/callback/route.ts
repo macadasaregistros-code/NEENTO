@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { withSupabaseAuthTimeout } from "@/src/lib/supabase/errors";
 import { createClient } from "@/src/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -9,7 +10,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+
+    try {
+      await withSupabaseAuthTimeout(supabase.auth.exchangeCodeForSession(code));
+    } catch {
+      return NextResponse.redirect(new URL("/login", requestUrl.origin));
+    }
   }
 
   return NextResponse.redirect(new URL(next, requestUrl.origin));

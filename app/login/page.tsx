@@ -8,6 +8,10 @@ import { Suspense, useState } from "react";
 import { useLearningMode } from "@/hooks/useLearningMode";
 import { getPersonaForEmail } from "@/lib/app-persona";
 import { createClient } from "@/src/lib/supabase/client";
+import {
+  getSupabaseAuthErrorMessage,
+  withSupabaseAuthTimeout,
+} from "@/src/lib/supabase/errors";
 
 const authText = {
   email: "Correo",
@@ -56,15 +60,26 @@ function LoginForm() {
       return;
     }
 
-    const supabase = createClient();
-    const result = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      type SignInResult = Awaited<
+        ReturnType<typeof supabase.auth.signInWithPassword>
+      >;
+      const result = await withSupabaseAuthTimeout<SignInResult>(
+        supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        }),
+      );
 
-    if (result.error) {
+      if (result.error) {
+        setIsLoading(false);
+        setMessage(getSupabaseAuthErrorMessage(result.error));
+        return;
+      }
+    } catch (error) {
       setIsLoading(false);
-      setMessage(result.error.message);
+      setMessage(getSupabaseAuthErrorMessage(error));
       return;
     }
 
